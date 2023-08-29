@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MPL-2.0
 import re
 import tokenize
+from hashlib import file_digest
 from pathlib import Path
 from shutil import rmtree
 
@@ -11,8 +12,13 @@ import nox  # type: ignore
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
 PYTHON = Path(VIRTUAL_ENVIRONMENT).absolute() / "bin" / "python"
+SDISTS = Path(".").absolute() / "sdists"
 
-nox.options.sessions = ["script"]
+nox.options.sessions = ["download"]
+
+
+SPECIFIER = "qgrid"
+HASH = "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c"
 
 
 def read_dependency_block(filename):
@@ -42,6 +48,30 @@ def read_dependency_block(filename):
             if not line:
                 continue
             yield line
+
+
+@nox.session()
+def download(session) -> None:
+    """Download a source distribution and check its hash matches"""
+    rmtree(SDISTS, ignore_errors=True)
+    session.run(
+        "python",
+        "-m",
+        "pip",
+        "download",
+        "--no-deps",
+        f"--dest={SDISTS}",
+        SPECIFIER,
+    )
+    sdists = list(SDISTS.iterdir())
+    assert len(sdists) == 1, "More than one sdist downloaded"
+
+    sdist = sdists[0]
+    with sdist.open("rb") as f:
+        digest = file_digest(f, "sha256")
+
+    assert digest.hexdigest() == HASH, "Hash does not match"
+    session.notify("script")
 
 
 @nox.session()
