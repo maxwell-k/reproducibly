@@ -4,6 +4,7 @@ Upstream-Contact: Keith Maxwell <keith.maxwell@gmail.com>
 Source: https://github.com/maxwell-k/reproducibly
 
 Files:
+ .flake8
  .gitignore
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
 License: CC0-1.0
