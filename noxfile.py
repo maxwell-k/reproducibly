@@ -1,3 +1,6 @@
+# noxfile.py
+# Copyright 2023 Keith Maxwell
+# SPDX-License-Identifier: MPL-2.0
 import re
 import tokenize
 from pathlib import Path
@@ -69,4 +72,5 @@ def venv(session) -> None:
         "flake8",
         "nox",
         "reorder-python-imports",
+        "reuse",
     )
