@@ -24,12 +24,15 @@ SCRIPT = Path("build_wheels.py")
 
 SPECIFIERS = [
     "qgrid",
+    "cowsay==5.0",
 ]
 SDIST_DIGESTS = [
     "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c",
+    "c00e02444f5bc7332826686bd44d963caabbaba9a804a63153822edce62bbbf3",
 ]
 WHEEL_DIGESTS = [
     "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a",
+    "3f42f93cef4e28fd4e1abd034d8f7e9106073aa31ad9d78df2fb489cc9f53a86",
 ]
 
 nox.options.sessions = ["introduction"]
