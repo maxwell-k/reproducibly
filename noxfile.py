@@ -22,7 +22,7 @@ SPECIFIER = "qgrid"
 SDIST_HASH = "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c"
 WHEEL_HASH = "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a"
 
-nox.options.sessions = ["download"]
+nox.options.sessions = ["introduction"]
 
 
 def read_dependency_block(script: Path) -> Generator[str, None, None]:
@@ -52,6 +52,13 @@ def read_dependency_block(script: Path) -> Generator[str, None, None]:
             if not line:
                 continue
             yield line
+
+
+@nox.session()
+def introduction(session) -> None:
+    """Start a series of sessions"""
+    session.run("python", "--version")
+    session.notify("download")
 
 
 @nox.session()
