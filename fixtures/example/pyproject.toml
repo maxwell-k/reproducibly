@@ -1,0 +1,22 @@
+[project]
+name = "example"
+version = "0.0.1"
+description = "An example package"
+readme = "README.md"
+authors = [{name = "Keith Maxwell", email = "keith.maxwell@gmail.com"}]
+license = {text = "MPL 2.0"}
+classifiers = [
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.11",
+]
+keywords = ["example"]
+dependencies = []
+urls = { homepage = "https://github.com/maxwell-k/reproducibly" }
+
+[build-system]
+requires = [
+  "setuptools",
+]
+build-backend = "setuptools.build_meta"

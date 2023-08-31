@@ -7,5 +7,7 @@ Files:
  .coveragerc
  .flake8
  .gitignore
+ fixtures/example/pyproject.toml
+ fixtures/example/README.md
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
 License: CC0-1.0

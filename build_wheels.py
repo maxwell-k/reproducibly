@@ -26,11 +26,13 @@ from zipfile import ZipFile
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
 from packaging.requirements import Requirement
+from pyproject_hooks import default_subprocess_runner
 
 #
 # Script dependencies:
 #   build @ git+https://github.com/pypa/build@59c1f87503914d04b634db3633d7189e8627e65b
 #   packaging
+#   pyproject_hooks
 #
 
 CONSTRAINTS = {
@@ -80,7 +82,11 @@ def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
 
     Returns the path to the built distribution"""
     with DefaultIsolatedEnv() as env:
-        builder = ProjectBuilder.from_isolated_env(env, srcdir)
+        builder = ProjectBuilder.from_isolated_env(
+            env,
+            srcdir,
+            runner=default_subprocess_runner,
+        )
         env.install(override(builder.build_system_requires))
         env.install(override(builder.get_requires_for_build(distribution)))
         built = builder.build(distribution, output)
@@ -98,9 +104,9 @@ def build_wheel_from_sdist(sdist: Path, output: Path) -> int:
     return 0
 
 
-def main() -> int:
-    sdists = [Path(i) for i in argv[1:-1]]
-    output = Path(argv[-1])
+def main(arguments: list[str] = argv) -> int:
+    sdists = [Path(i) for i in arguments[1:-1]]
+    output = Path(arguments[-1])
     if sdists and all(i.is_file() for i in sdists) and output.is_dir():
         issues = sum(build_wheel_from_sdist(sdist, output) for sdist in sdists)
         return min(issues, 1)

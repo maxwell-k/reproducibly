@@ -76,7 +76,11 @@ def introduction(session) -> None:
 @nox.session()
 def unit_test(session) -> None:
     """Run unit tests"""
-    session.install("coverage", *read_dependency_block())
+    session.install("coverage", "build", *read_dependency_block())
+
+    with session.chdir("fixtures/example"):
+        session.run("python", "-m", "build", "--sdist")
+
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "report")
     session.run("python", "-m", "coverage", "html")

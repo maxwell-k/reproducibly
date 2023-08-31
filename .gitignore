@@ -1,5 +1,8 @@
 *.pyc
 /.coverage
 /.venv/
+/fixtures/example/build/
+/fixtures/example/dist/
+/fixtures/example/src/example.egg-info/
 /sdists/
 /wheelhouse/
