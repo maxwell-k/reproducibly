@@ -16,6 +16,7 @@ Features:
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import tarfile
+from argparse import ArgumentParser
 from os import environ
 from pathlib import Path
 from shutil import move
@@ -38,6 +39,7 @@ from pyproject_hooks import default_subprocess_runner
 CONSTRAINTS = {
     "wheel==0.41.0",
 }
+PROG = "build_wheels.py"
 
 # [[[cog
 # import cog
@@ -112,11 +114,18 @@ def build_wheel_from_sdist(sdist: Path, output: Path) -> int:
     return 0
 
 
-def main(arguments: list[str] = argv) -> int:
-    sdists = [Path(i) for i in arguments[1:-1]]
-    output = Path(arguments[-1])
-    if sdists and all(i.is_file() for i in sdists) and output.is_dir():
-        issues = sum(build_wheel_from_sdist(sdist, output) for sdist in sdists)
+def main(argv_=argv[1:]) -> int:
+    parser = ArgumentParser(prog=PROG)
+    parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument("source_distribution", nargs="+", type=Path)
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args(argv_)
+
+    if all(i.is_file() for i in args.source_distribution) and args.output.is_dir():
+        issues = sum(
+            build_wheel_from_sdist(sdist, args.output)
+            for sdist in args.source_distribution
+        )
         return min(issues, 1)
 
     print(__doc__, end="")

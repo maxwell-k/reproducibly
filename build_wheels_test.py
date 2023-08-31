@@ -30,7 +30,7 @@ class TestMainWithFixture(unittest.TestCase):
             "build_wheels.default_subprocess_runner",
             quiet_subprocess_runner,
         ), TemporaryDirectory() as output:
-            result = main(["", self.sdist, output])
+            result = main([self.sdist, output])
             count = sum(1 for i in Path(output).iterdir())
         self.assertEqual(result, 0)
         self.assertEqual(count, 1)
@@ -39,7 +39,7 @@ class TestMainWithFixture(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def test_missing_files(self):
         with patch("builtins.print") as mock:
-            result = main(["", "missing.tar.gz", "missing_directory"])
+            result = main(["missing.tar.gz", "missing_directory"])
         self.assertEqual(result, 1)
         mock.assert_called_once()
 
