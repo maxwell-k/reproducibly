@@ -35,7 +35,7 @@ WHEEL_DIGESTS = [
     "3f42f93cef4e28fd4e1abd034d8f7e9106073aa31ad9d78df2fb489cc9f53a86",
 ]
 
-nox.options.sessions = ["introduction"]
+nox.options.sessions = ["introduction", "unit_test", "integration_test"]
 
 
 def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
@@ -71,7 +71,6 @@ def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
 def introduction(session) -> None:
     """Start a test run"""
     session.run("python", "--version")
-    session.notify("unit_test")
 
 
 @nox.session()
@@ -81,7 +80,6 @@ def unit_test(session) -> None:
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "report")
     session.run("python", "-m", "coverage", "html")
-    session.notify("integration_test")
 
 
 @nox.session()
