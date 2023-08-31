@@ -40,7 +40,6 @@ nox.options.sessions = [
     "unit_test",
     "integration_test",
     "reuse",
-    "version",
 ]
 
 
@@ -172,7 +171,6 @@ def reuse(session) -> None:
 
 @nox.session()
 def version(session) -> None:
-    """Check the version in scripts matches VERSION (use -- -r to change)"""
+    """Copy VERSION into scripts"""
     session.install("cogapp")
-    args = session.posargs if session.posargs else ("--check",)
-    session.run("python", "-m", "cogapp", *args, SCRIPT, "cleanse_metadata.py")
+    session.run("python", "-m", "cogapp", "-r", SCRIPT, "cleanse_metadata.py")

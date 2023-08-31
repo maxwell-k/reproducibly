@@ -37,6 +37,14 @@ class TestMainWithFixture(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
+    def test_version(self):
+        with patch("sys.stdout") as mock:
+            try:
+                main(["--version"])
+            except SystemExit:
+                pass
+        mock.write.assert_called_once_with(Path("VERSION").read_text())
+
     def test_missing_files(self):
         with patch("builtins.print") as mock:
             result = main(["missing.tar.gz", "missing_directory"])
