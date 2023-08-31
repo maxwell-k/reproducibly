@@ -22,8 +22,3 @@ jobs:
         with:
           name: wheelhouse
           path: wheelhouse
-      - name: Upload html coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: htmlcov
-          path: htmlcov
