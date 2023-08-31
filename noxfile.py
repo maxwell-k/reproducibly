@@ -25,7 +25,7 @@ WHEEL_HASH = "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a"
 nox.options.sessions = ["introduction"]
 
 
-def read_dependency_block(script: Path) -> Generator[str, None, None]:
+def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
     """Read script dependencies
 
     Based on the reference implementation in PEP 722:
@@ -126,7 +126,7 @@ def venv(session) -> None:
         "--upgrade-deps",
         VIRTUAL_ENVIRONMENT,
     )
-    dependencies = list(read_dependency_block(SCRIPT))
+    dependencies = list(read_dependency_block())
     session.run(
         PYTHON,
         "-m",
