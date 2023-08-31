@@ -15,9 +15,9 @@ https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/set
 # cleanse_metadata.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
-import argparse
 import gzip
 import tarfile
+from argparse import ArgumentParser
 from datetime import datetime
 from os import utime
 from pathlib import Path
@@ -86,7 +86,7 @@ def cleanse_metadata(path_: Path, mtime: float = DEFAULT_DATE) -> int:
 
 def main(arguments: list[str] = argv):
     """Call cleanse_metadata once for each input"""
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("source_distribution", nargs="+", type=Path)
     args = parser.parse_args(arguments)
