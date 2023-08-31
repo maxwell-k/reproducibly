@@ -68,12 +68,13 @@ def unit_test(session) -> None:
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "report")
     session.run("python", "-m", "coverage", "html")
-    session.notify("download")
+    session.notify("integration_test")
 
 
 @nox.session()
-def download(session) -> None:
-    """Download a source distribution and check its hash matches"""
+def integration_test(session) -> None:
+    """Check hashes from wheels built from downloaded sdists"""
+    # Download a source distribution
     rmtree(SDISTS, ignore_errors=True)
     session.run(
         "python",
@@ -85,44 +86,28 @@ def download(session) -> None:
         SPECIFIER,
     )
     sdists = list(SDISTS.iterdir())
-    assert len(sdists) == 1, "One sdist should be present"
 
     sdist = sdists[0]
     with sdist.open("rb") as f:
         digest = file_digest(f, "sha256")
 
-    assert digest.hexdigest() == SDIST_HASH, "Hash does not match"
-    session.notify("build_wheels")
-
-
-@nox.session()
-def build_wheels(session) -> None:
-    """Run build_wheels.py on test sdist"""
-    sdists = list(SDISTS.iterdir())
-    assert len(sdists) == 1, "One sdist should be present"
-    sdist = sdists[0]
-
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
-
-    dependencies = list(read_dependency_block(SCRIPT))
-    session.install(*dependencies)
+    session.install(*read_dependency_block())
     session.run("python", SCRIPT, sdist, WHEELS)
-    session.notify("check")
 
-
-@nox.session()
-def check(session) -> None:
-    """Check that the hash of the built wheel matches"""
+    # Calculate the hash of the built wheel
     wheels = list(WHEELS.iterdir())
-    assert len(wheels) == 1, "More than one sdist downloaded"
-
     wheel = wheels[0]
     with wheel.open("rb") as f:
-        digest = file_digest(f, "sha256")
+        wheel_digest = file_digest(f, "sha256")
+
+    assert len(sdists) == 1, "Expected one sdist"
+    assert len(wheels) == 1, "Expected one wheel"
+    assert digest.hexdigest() == SDIST_HASH, "Sdist hash does not match"
     assert (
-        actual := digest.hexdigest()
-    ) == WHEEL_HASH, f"Digest {actual} does not match expected {WHEEL_HASH}"
+        actual := wheel_digest.hexdigest()
+    ) == WHEEL_HASH, f"Wheel hash {actual} does not match expected {WHEEL_HASH}"
 
 
 @nox.session(python=False)
@@ -136,16 +121,16 @@ def venv(session) -> None:
         "--upgrade-deps",
         VIRTUAL_ENVIRONMENT,
     )
-    dependencies = list(read_dependency_block())
     session.run(
         PYTHON,
         "-m",
         "pip",
         "install",
         "black",
+        "coverage",
         "flake8",
         "nox",
         "reorder-python-imports",
         "reuse",
-        *dependencies,
+        *read_dependency_block(),
     )
