@@ -131,8 +131,8 @@ def integration_test(session) -> None:
 
 
 @nox.session(python=False)
-def venv(session) -> None:
-    """Set up a virtual environment for development"""
+def dev(session) -> None:
+    """Set up a development environment (virtual environment)"""
     rmtree(VIRTUAL_ENVIRONMENT, ignore_errors=True)
     session.run(
         f"python{PRIMARY}",

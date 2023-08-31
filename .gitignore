@@ -1,4 +1,5 @@
 *.pyc
+*.add.spl
 /.coverage
 /.venv/
 /fixtures/example/build/

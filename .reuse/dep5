@@ -5,9 +5,10 @@ Source: https://github.com/maxwell-k/reproducibly
 
 Files:
  .coveragerc
+ .en.utf-8.add
  .flake8
  .gitignore
- fixtures/example/pyproject.toml
  fixtures/example/README.md
+ fixtures/example/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
 License: CC0-1.0
