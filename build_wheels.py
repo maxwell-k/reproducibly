@@ -12,7 +12,7 @@ Features:
 - Applies a umask of 022
 - Tested on Python 3.11
 """
-# script.py
+# build_wheels.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import tarfile

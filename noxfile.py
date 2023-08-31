@@ -56,8 +56,18 @@ def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
 
 @nox.session()
 def introduction(session) -> None:
-    """Start a series of sessions"""
+    """Start a test run"""
     session.run("python", "--version")
+    session.notify("unit_test")
+
+
+@nox.session()
+def unit_test(session) -> None:
+    """Run unit tests"""
+    session.install("coverage", *read_dependency_block())
+    session.run("python", "-m", "coverage", "run")
+    session.run("python", "-m", "coverage", "report")
+    session.run("python", "-m", "coverage", "html")
     session.notify("download")
 
 

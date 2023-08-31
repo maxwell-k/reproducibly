@@ -1,0 +1,9 @@
+[run]
+branch = True
+command_line = build_wheels_test.py
+omit =
+    *_test.py
+
+[report]
+exclude_also =
+    if __name__ == .__main__.:

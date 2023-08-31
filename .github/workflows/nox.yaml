@@ -18,4 +18,11 @@ jobs:
       - run: nox
       - name: Upload wheelhouse
         uses: actions/upload-artifact@v3
-        with: { path: wheelhouse }
+        with:
+          name: wheelhouse
+          path: wheelhouse
+      - name: Upload html coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: htmlcov
+          path: htmlcov
