@@ -1,0 +1,19 @@
+# .github/workflows/nox.yaml
+# Copyright 2023 Keith Maxwell
+# SPDX-License-Identifier: CC0-1.0
+
+name: Nox
+on: # yamllint disable-line rule:truthy
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with: { python-version: '3.11' }
+      - run: pipx install --python python3.11 nox && nox --version
+      - run: nox

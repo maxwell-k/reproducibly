@@ -16,7 +16,7 @@ CWD = Path(".").absolute()
 PYTHON = CWD / ".venv" / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
-SCRIPT = Path("build_wheels_from_sdists.py")
+SCRIPT = Path("build_wheels.py")
 
 SPECIFIER = "qgrid"
 SDIST_HASH = "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c"
@@ -75,12 +75,12 @@ def download(session) -> None:
         digest = file_digest(f, "sha256")
 
     assert digest.hexdigest() == SDIST_HASH, "Hash does not match"
-    session.notify("build_wheels_from_sdists")
+    session.notify("build_wheels")
 
 
 @nox.session()
-def build_wheels_from_sdists(session) -> None:
-    """Run build_wheels_from_sdists.py on test sdist"""
+def build_wheels(session) -> None:
+    """Run build_wheels.py on test sdist"""
     sdists = list(SDISTS.iterdir())
     assert len(sdists) == 1, "One sdist should be present"
     sdist = sdists[0]
