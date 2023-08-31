@@ -9,6 +9,10 @@ from pathlib import Path
 from shutil import rmtree
 
 import nox
+from packaging.requirements import Requirement  # see below
+
+# nox depends on packaging so it is safe to import as well
+# https://github.com/wntrblm/nox/blob/main/pyproject.toml#L46
 
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
@@ -18,9 +22,15 @@ SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
 SCRIPT = Path("build_wheels.py")
 
-SPECIFIER = "qgrid"
-SDIST_HASH = "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c"
-WHEEL_HASH = "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a"
+SPECIFIERS = [
+    "qgrid",
+]
+SDIST_DIGESTS = [
+    "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c",
+]
+WHEEL_DIGESTS = [
+    "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a",
+]
 
 nox.options.sessions = ["introduction"]
 
@@ -74,7 +84,6 @@ def unit_test(session) -> None:
 @nox.session()
 def integration_test(session) -> None:
     """Check hashes from wheels built from downloaded sdists"""
-    # Download a source distribution
     rmtree(SDISTS, ignore_errors=True)
     session.run(
         "python",
@@ -82,32 +91,38 @@ def integration_test(session) -> None:
         "pip",
         "download",
         "--no-deps",
+        "--no-binary=:all:",
         f"--dest={SDISTS}",
-        SPECIFIER,
+        *SPECIFIERS,
     )
-    sdists = list(SDISTS.iterdir())
-
-    sdist = sdists[0]
-    with sdist.open("rb") as f:
-        digest = file_digest(f, "sha256")
 
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
     session.install(*read_dependency_block())
-    session.run("python", SCRIPT, sdist, WHEELS)
+    session.run("python", SCRIPT, *SDISTS.iterdir(), WHEELS)
 
-    # Calculate the hash of the built wheel
-    wheels = list(WHEELS.iterdir())
-    wheel = wheels[0]
-    with wheel.open("rb") as f:
-        wheel_digest = file_digest(f, "sha256")
+    # List each file for a specifier
+    sdists, wheels = [], []
+    for specifier in SPECIFIERS:
+        glob = Requirement(specifier).name + "*"
+        sdists.append(next(SDISTS.glob(glob)))
+        wheels.append(next(WHEELS.glob(glob)))
 
-    assert len(sdists) == 1, "Expected one sdist"
-    assert len(wheels) == 1, "Expected one wheel"
-    assert digest.hexdigest() == SDIST_HASH, "Sdist hash does not match"
+    def sha256(path: Path) -> str:
+        with path.open("rb") as f:
+            return file_digest(f, "sha256").hexdigest()
+
+    sdist_digests = [sha256(i) for i in sdists]
+    wheel_digests = [sha256(i) for i in wheels]
+
+    assert len(sdists) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} sdists"
+    assert len(wheels) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} wheels"
     assert (
-        actual := wheel_digest.hexdigest()
-    ) == WHEEL_HASH, f"Wheel hash {actual} does not match expected {WHEEL_HASH}"
+        sdist_digests == SDIST_DIGESTS
+    ), f"Sdist digests {sdist_digests} do not match expected {SDIST_DIGESTS}"
+    assert (
+        wheel_digests == WHEEL_DIGESTS
+    ), f"Wheel digests {wheel_digests} do not match expected {WHEEL_DIGESTS}"
 
 
 @nox.session(python=False)
