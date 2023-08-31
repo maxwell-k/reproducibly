@@ -175,4 +175,4 @@ def version(session) -> None:
     """Check the version in scripts matches VERSION (use -- -r to change)"""
     session.install("cogapp")
     args = session.posargs if session.posargs else ("--check",)
-    session.run("python", "-m", "cogapp", *args, SCRIPT)
+    session.run("python", "-m", "cogapp", *args, SCRIPT, "cleanse_metadata.py")
