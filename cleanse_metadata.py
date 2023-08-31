@@ -45,10 +45,11 @@ __version__ = "0.0.1.dev1"
 # [[[end]]]
 
 
-def cleanse_metadata(path_: Path) -> int:
+def cleanse_metadata(path_: Path, mtime: float = DEFAULT_DATE) -> int:
     """Cleanse metadata from a single source distribution"""
     path = path_.absolute()
-    mtime = DEFAULT_DATE
+
+    mtime = max(mtime, DEFAULT_DATE)
 
     if not path.is_file():
         print(f"{path} is not a file")
