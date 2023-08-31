@@ -45,10 +45,10 @@ def latest_modification_time(archive: Path) -> str:
     return "{:.0f}".format(latest)
 
 
-def _override(before: set[str]) -> set[str]:
-    """Replace certain requirements from CONSTRAINTS"""
+def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
+    """Replace certain requirements from constraints"""
     after = set()
-    for replacement in CONSTRAINTS:
+    for replacement in constraints:
         name = Requirement(replacement).name
         for i in before:
             after.add(replacement if Requirement(i).name == name else i)
@@ -81,8 +81,8 @@ def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
     Returns the path to the built distribution"""
     with DefaultIsolatedEnv() as env:
         builder = ProjectBuilder.from_isolated_env(env, srcdir)
-        env.install(_override(builder.build_system_requires))
-        env.install(_override(builder.get_requires_for_build(distribution)))
+        env.install(override(builder.build_system_requires))
+        env.install(override(builder.get_requires_for_build(distribution)))
         built = builder.build(distribution, output)
     return output / built
 
