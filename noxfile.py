@@ -35,7 +35,7 @@ WHEEL_DIGESTS = [
     "3f42f93cef4e28fd4e1abd034d8f7e9106073aa31ad9d78df2fb489cc9f53a86",
 ]
 
-nox.options.sessions = ["introduction", "unit_test", "integration_test"]
+nox.options.sessions = ["introduction", "unit_test", "integration_test", "reuse"]
 
 
 def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
@@ -154,3 +154,10 @@ def venv(session) -> None:
         "reuse",
         *read_dependency_block(),
     )
+
+
+@nox.session()
+def reuse(session) -> None:
+    """Run reuse lint outside of CI"""
+    session.install("reuse")
+    session.run("python", "-m", "reuse", "lint")
