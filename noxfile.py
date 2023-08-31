@@ -35,7 +35,13 @@ WHEEL_DIGESTS = [
     "3f42f93cef4e28fd4e1abd034d8f7e9106073aa31ad9d78df2fb489cc9f53a86",
 ]
 
-nox.options.sessions = ["introduction", "unit_test", "integration_test", "reuse"]
+nox.options.sessions = [
+    "introduction",
+    "unit_test",
+    "integration_test",
+    "reuse",
+    "version",
+]
 
 
 def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
@@ -147,6 +153,7 @@ def dev(session) -> None:
         "pip",
         "install",
         "black",
+        "cogapp",
         "coverage",
         "flake8",
         "nox",
@@ -161,3 +168,11 @@ def reuse(session) -> None:
     """Run reuse lint outside of CI"""
     session.install("reuse")
     session.run("python", "-m", "reuse", "lint")
+
+
+@nox.session()
+def version(session) -> None:
+    """Check the version in scripts matches VERSION (use -- -r to change)"""
+    session.install("cogapp")
+    args = session.posargs if session.posargs else ("--check",)
+    session.run("python", "-m", "cogapp", *args, SCRIPT)

@@ -8,6 +8,7 @@ Files:
  .en.utf-8.add
  .flake8
  .gitignore
+ VERSION
  fixtures/example/README.md
  fixtures/example/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>

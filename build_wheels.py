@@ -39,6 +39,14 @@ CONSTRAINTS = {
     "wheel==0.41.0",
 }
 
+# [[[cog
+# import cog
+# from pathlib import Path
+# cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"")
+# ]]]
+__version__ = "0.0.1.dev1"
+# [[[end]]]
+
 
 def latest_modification_time(archive: Path) -> str:
     """Latest modification time for a gzipped tarfile as a string"""
