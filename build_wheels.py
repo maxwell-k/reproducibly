@@ -1,4 +1,4 @@
-"""Build wheels from a source distributions (sdists)
+"""Build wheels for source distributions
 
 Usage:
 
@@ -39,7 +39,6 @@ from pyproject_hooks import default_subprocess_runner
 CONSTRAINTS = {
     "wheel==0.41.0",
 }
-PROG = "build_wheels.py"
 
 # [[[cog
 # import cog
@@ -115,10 +114,17 @@ def build_wheel_from_sdist(sdist: Path, output: Path) -> int:
 
 
 def main(argv_=argv[1:]) -> int:
-    parser = ArgumentParser(prog=PROG)
+    parser = ArgumentParser(
+        description="Build wheels for source distributions",
+    )
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("source_distribution", nargs="+", type=Path)
-    parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "source_distribution",
+        nargs="+",
+        type=Path,
+        help="source distributions to build",
+    )
+    parser.add_argument("output", type=Path, help="output directory for built wheels")
     args = parser.parse_args(argv_)
 
     if all(i.is_file() for i in args.source_distribution) and args.output.is_dir():

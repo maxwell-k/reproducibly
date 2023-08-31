@@ -86,9 +86,14 @@ def cleanse_metadata(path_: Path, mtime: float = DEFAULT_DATE) -> int:
 
 def main(arguments: list[str] = argv):
     """Call cleanse_metadata once for each input"""
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="Cleanse metadata from source distributions")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("source_distribution", nargs="+", type=Path)
+    parser.add_argument(
+        "source_distribution",
+        nargs="+",
+        type=Path,
+        help="source distributions to change in place",
+    )
     args = parser.parse_args(arguments)
     returncode = 0
     # try all source distributions before exiting with an error
