@@ -13,9 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with: { python-version: "3.11" }
-      - run: pipx install --python python3.11 nox && nox --version
+      - uses: wntrblm/nox@2023.04.22
+        with: { python-versions: "3.11" }
       - run: nox
       - name: Upload wheelhouse
         uses: actions/upload-artifact@v3
