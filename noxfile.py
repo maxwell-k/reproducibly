@@ -82,8 +82,8 @@ def unit_test(session) -> None:
         session.run("python", "-m", "build", "--sdist")
 
     session.run("python", "-m", "coverage", "run")
-    session.run("python", "-m", "coverage", "report")
     session.run("python", "-m", "coverage", "html")
+    session.run("python", "-m", "coverage", "report", "--fail-under=100")
 
 
 @nox.session()
