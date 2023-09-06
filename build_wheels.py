@@ -31,7 +31,7 @@ from pyproject_hooks import default_subprocess_runner
 
 #
 # Script dependencies:
-#   build @ git+https://github.com/pypa/build@59c1f87503914d04b634db3633d7189e8627e65b
+#   build
 #   packaging
 #   pyproject_hooks
 #
