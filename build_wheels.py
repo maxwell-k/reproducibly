@@ -42,7 +42,12 @@ from pyproject_hooks import default_subprocess_runner
 # [[[end]]]
 
 CONSTRAINTS = {
+    # [[[cog
+    # for line in Path("constraints.txt").read_text().splitlines():
+    #   cog.outl(f'"{line}",')
+    # ]]]
     "wheel==0.41.0",
+    # [[[end]]]
 }
 
 # [[[cog cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"") ]]]

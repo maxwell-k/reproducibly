@@ -21,6 +21,10 @@ PYTHON = CWD / ".venv" / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
 SCRIPT = Path("build_wheels.py")
+SCRIPTS = (
+    SCRIPT,
+    Path("cleanse_metadata.py"),
+)
 
 SPECIFIERS = [
     "qgrid",
@@ -76,6 +80,13 @@ def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
 def introduction(session) -> None:
     """Start a test run"""
     session.run("python", "--version")
+
+
+@nox.session()
+def generated(session) -> None:
+    """Check that the files have been generated"""
+    session.install("cogapp")
+    session.run("python", "-m", "cogapp", "--check", *SCRIPTS)
 
 
 @nox.session()
@@ -173,4 +184,4 @@ def reuse(session) -> None:
 def generate(session) -> None:
     """Copy VERSION and constraints.txt into scripts"""
     session.install("cogapp")
-    session.run("python", "-m", "cogapp", "-r", SCRIPT, "cleanse_metadata.py")
+    session.run("python", "-m", "cogapp", "-r", *SCRIPTS)

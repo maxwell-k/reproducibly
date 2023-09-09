@@ -9,6 +9,7 @@ Files:
  .flake8
  .gitignore
  VERSION
+ constraints.txt
  fixtures/example/README.md
  fixtures/example/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
