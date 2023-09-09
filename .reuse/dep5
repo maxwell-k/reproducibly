@@ -12,5 +12,6 @@ Files:
  constraints.txt
  fixtures/example/README.md
  fixtures/example/pyproject.toml
+ renovate.json
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
 License: CC0-1.0
