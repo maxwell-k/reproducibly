@@ -93,7 +93,7 @@ def unit_test(session) -> None:
 
 @nox.session()
 def integration_test(session) -> None:
-    """Check hashes from wheels built from downloaded sdists"""
+    """Check hashes of wheels built from downloaded sdists"""
     rmtree(SDISTS, ignore_errors=True)
     session.run(
         "python",
