@@ -34,17 +34,18 @@ from pyproject_hooks import default_subprocess_runner
 #   build
 #   packaging
 #   pyproject_hooks
-#
+
+# [[[cog
+# import cog
+# from pathlib import Path
+# ]]]
+# [[[end]]]
 
 CONSTRAINTS = {
     "wheel==0.41.0",
 }
 
-# [[[cog
-# import cog
-# from pathlib import Path
-# cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"")
-# ]]]
+# [[[cog cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"") ]]]
 __version__ = "0.0.1.dev1"
 # [[[end]]]
 

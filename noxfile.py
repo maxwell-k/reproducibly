@@ -170,7 +170,7 @@ def reuse(session) -> None:
 
 
 @nox.session()
-def version(session) -> None:
-    """Copy VERSION into scripts"""
+def generate(session) -> None:
+    """Copy VERSION and constraints.txt into scripts"""
     session.install("cogapp")
     session.run("python", "-m", "cogapp", "-r", SCRIPT, "cleanse_metadata.py")
