@@ -17,7 +17,7 @@ from packaging.requirements import Requirement  # see below
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
-PYTHON = CWD / ".venv" / "bin" / "python"
+PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
 SCRIPT = Path("build_wheels.py")
