@@ -76,20 +76,20 @@ def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
             yield line
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def version(session) -> None:
     """Start a test run"""
     session.run("python", "--version")
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def generated(session) -> None:
     """Check that the files have been generated"""
     session.install("cogapp")
     session.run("python", "-m", "cogapp", "--check", *SCRIPTS)
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def unit_test(session) -> None:
     """Run unit tests"""
     session.install("coverage", "build", *read_dependency_block())
@@ -102,7 +102,7 @@ def unit_test(session) -> None:
     session.run("python", "-m", "coverage", "report", "--fail-under=100")
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def integration_test(session) -> None:
     """Check hashes of wheels built from downloaded sdists"""
     rmtree(SDISTS, ignore_errors=True)
@@ -173,14 +173,14 @@ def dev(session) -> None:
     )
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def reuse(session) -> None:
     """Run reuse lint outside of CI"""
     session.install("reuse")
     session.run("python", "-m", "reuse", "lint")
 
 
-@nox.session()
+@nox.session(python=PRIMARY)
 def generate(session) -> None:
     """Copy VERSION and constraints.txt into scripts"""
     session.install("cogapp")
