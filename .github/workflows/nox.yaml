@@ -18,7 +18,7 @@ jobs:
         with: { python-versions: "3.11" }
       - run: nox
       - name: Upload wheelhouse
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheelhouse
           path: wheelhouse
