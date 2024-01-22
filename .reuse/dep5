@@ -10,6 +10,7 @@ Files:
  .gitignore
  VERSION
  constraints.txt
+ fixtures/example/.gitignore
  fixtures/example/README.md
  fixtures/example/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
