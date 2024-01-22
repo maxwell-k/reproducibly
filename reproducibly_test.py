@@ -1,16 +1,80 @@
+# SPDX-FileCopyrightText: 2024 Keith Maxwell <keith.maxwell@gmail.com>
+#
+# SPDX-License-Identifier: MPL-2.0
+import tarfile
 import unittest
+from os import utime
 from pathlib import Path
+from stat import filemode
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
+from time import mktime
 from unittest.mock import patch
+from zipfile import ZipFile
 
-from reproducibly import bdist_from_sdist
+from pyproject_hooks import quiet_subprocess_runner
+
+from reproducibly import latest_modification_time
 from reproducibly import main
+from reproducibly import override
 from reproducibly import parse_args
 from reproducibly import sdist_from_git
+from reproducibly import zipumask
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
+
+
+class TestLatestModificationTime(unittest.TestCase):
+    def test_basic(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            one = path / "1.txt"
+            one.write_text("One")
+            mtime = mktime((2002, 1, 1, 0, 0, 0, 0, 0, 0))
+            utime(one, (one.stat().st_atime, mtime))
+            two = path / "2.txt"
+            two.write_text("Two")
+            latest = mktime((2020, 1, 1, 0, 0, 0, 0, 0, 0))
+            utime(two, (two.stat().st_atime, latest))
+
+            archive = path / "archive.tar.gz"
+            with tarfile.open(archive, mode="w:gz") as tar:
+                tar.add(one)
+                tar.add(two)
+
+            result = latest_modification_time(archive)
+            self.assertEqual(result, str(int(latest)))
+
+
+class TestOverride(unittest.TestCase):
+    def test_overridden_with_specific_version(self):
+        result = override({"example"}, {"example==1.2.3"})
+        self.assertEqual(result, {"example==1.2.3"})
+
+    def test_unchanged(self):
+        result = override({"example"}, {"other==1.2.3"})
+        self.assertEqual(result, {"example"})
+
+
+class TestZipumask(unittest.TestCase):
+    def test_basic(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            one = path / "1.txt"
+            one.write_text("One")
+            one.chmod(0o777)  # -rwxrwxrwx
+
+            archive = path / "archive.zip"
+            with ZipFile(archive, mode="w") as zip_:
+                zip_.write(one, one.name)
+
+            zipumask(archive)
+
+            with ZipFile(archive) as zip_:
+                mode = zip_.getinfo(one.name).external_attr >> 16
+
+        self.assertEqual(filemode(mode), "-rwxr-xr-x")
 
 
 class TestSdistFromGit(unittest.TestCase):
@@ -19,14 +83,8 @@ class TestSdistFromGit(unittest.TestCase):
             sdist_from_git(Path(GIT), Path(output))
 
 
-class TestBdistFromSdist(unittest.TestCase):
-    def test_main(self):
-        with self.assertRaises(NotImplementedError), TemporaryDirectory() as output:
-            bdist_from_sdist(Path(SDIST), Path(output))
-
-
 class TestMain(unittest.TestCase):
-    def test_both(self):
+    def test_calls(self):
         with TemporaryDirectory() as output, patch(
             "reproducibly.bdist_from_sdist"
         ) as bdist_from_sdist, patch("reproducibly.sdist_from_git") as sdist_from_git:
@@ -37,6 +95,21 @@ class TestMain(unittest.TestCase):
         self.assertEqual(bdist_from_sdist.mock_calls[0].args[1], Path(output))
         self.assertEqual(sdist_from_git.mock_calls[0].args[0], Path(GIT))
         self.assertEqual(sdist_from_git.mock_calls[0].args[1], Path(output))
+
+
+class TestBdistFromSdist(unittest.TestCase):
+    def test_on_fixture(self):
+        if not Path(SDIST).is_file():
+            raise RuntimeError(f"{SDIST} does not exist")
+
+        with patch(
+            "reproducibly.default_subprocess_runner",
+            quiet_subprocess_runner,
+        ), TemporaryDirectory() as output:
+            result = main([SDIST, output])
+            count = sum(1 for i in Path(output).iterdir())
+        self.assertEqual(result, 0)
+        self.assertEqual(count, 1)
 
 
 class TestParseArgs(unittest.TestCase):
@@ -68,26 +141,26 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(result["repositories"], [repository])
 
     def test_invalid_input(self):
-        with TemporaryDirectory() as empty, TemporaryDirectory() as output:
-            exited = False
-            with patch("reproducibly.ArgumentParser._print_message"):
-                try:
-                    parse_args([empty, output])
-                except SystemExit as e:
-                    exited = True if e.code == 2 else False
+        with TemporaryDirectory() as empty, TemporaryDirectory() as output, patch(
+            "reproducibly.ArgumentParser._print_message"
+        ), self.assertRaises(SystemExit) as cm:
+            parse_args([empty, output])
 
-            self.assertTrue(exited)
+        self.assertEqual(cm.exception.code, 2)
 
     def test_invalid_output(self):
-        with TemporaryDirectory() as empty, NamedTemporaryFile() as output:
-            exited = False
-            with patch("reproducibly.ArgumentParser._print_message"):
-                try:
-                    parse_args([empty, output.name])
-                except SystemExit as e:
-                    exited = True if e.code == 2 else False
+        with TemporaryDirectory() as empty, NamedTemporaryFile() as output, patch(
+            "reproducibly.ArgumentParser._print_message"
+        ), self.assertRaises(SystemExit) as cm:
+            parse_args([empty, output.name])
 
-            self.assertTrue(exited)
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_version(self):
+        with patch("sys.stdout") as mock, self.assertRaises(SystemExit) as cm:
+            parse_args(["--version"])
+        mock.write.assert_called_once_with(Path("VERSION").read_text())
+        self.assertEqual(cm.exception.code, 0)
 
 
 if __name__ == "__main__":
