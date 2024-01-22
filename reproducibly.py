@@ -10,12 +10,18 @@ Features:
 # reproducibly.py
 # Copyright 2024 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
+import gzip
 import tarfile
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
+from datetime import datetime
 from os import environ
+from os import utime
 from pathlib import Path
+from shutil import copyfileobj
 from shutil import move
+from stat import S_IWGRP
+from stat import S_IWOTH
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 from zipfile import ZipFile
@@ -39,6 +45,14 @@ from pyproject_hooks import default_subprocess_runner
 # ]]]
 # [[[end]]]
 
+# - Built distributions are created from source distributions
+# - Source distributions are typically gzipped tar files
+# - Built distributions are typically zip files
+# - The default date for this script is the earliest date supported by both
+# - The minimum date value supported by zip files, is documented in
+#   <https://github.com/python/cpython/blob/3.11/Lib/zipfile.py>.
+EARLIEST_DATE = datetime(1980, 1, 1, 0, 0, 0).timestamp()
+
 
 CONSTRAINTS = {
     # [[[cog
@@ -58,6 +72,40 @@ class Arguments(TypedDict):
     repositories: list[Path]
     sdists: list[Path]
     output: Path
+
+
+def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
+    """Cleanse metadata from a single source distribution"""
+    path = path_.absolute()
+
+    mtime = max(mtime, EARLIEST_DATE)
+
+    with TemporaryDirectory() as directory:
+        with tarfile.open(path) as tar:
+            tar.extractall(path=directory)
+
+        path.unlink(missing_ok=True)
+        (extracted,) = Path(directory).iterdir()
+        uncompressed = f"{extracted}.tar"
+
+        prefix = directory.removeprefix("/") + "/"
+
+        def filter_(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo:
+            tarinfo.mtime = int(mtime)
+            tarinfo.uid = tarinfo.gid = 0
+            tarinfo.uname = tarinfo.gname = "root"
+            tarinfo.mode = tarinfo.mode & ~S_IWGRP & ~S_IWOTH
+            tarinfo.path = tarinfo.path.removeprefix(prefix)
+            return tarinfo
+
+        with tarfile.open(uncompressed, "w") as tar:
+            tar.add(extracted, filter=filter_)
+
+        with gzip.GzipFile(filename=path, mode="wb", mtime=mtime) as file:
+            with open(uncompressed, "rb") as tar:
+                copyfileobj(tar, file)
+        utime(path, (mtime, mtime))
+    return 0
 
 
 def sdist_from_git(git: Path, output: Path):
