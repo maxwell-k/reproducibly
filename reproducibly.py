@@ -6,6 +6,7 @@ from typing import TypedDict
 class Arguments(TypedDict):
     repositories: list[Path]
     sdists: list[Path]
+    output: Path
 
 
 def parse_args(args: list[str] | None) -> Arguments:
@@ -14,17 +15,23 @@ def parse_args(args: list[str] | None) -> Arguments:
         description="Reproducibly build sdists or bdists",
     )
     help = "Input git repository or source distribution"
-    parser.add_argument("path", type=Path, nargs="+", help=help)
+    parser.add_argument("input", type=Path, nargs="+", help=help)
+    help = "Output directory"
+    parser.add_argument("output", type=Path, help=help)
     parsed = parser.parse_args(args)
-    output = Arguments(repositories=[], sdists=[])
-    for path in parsed.path.copy():
+    result = Arguments(repositories=[], sdists=[], output=parsed.output)
+    if not result["output"].exists():
+        result["output"].mkdir(parents=True)
+    if not result["output"].is_dir():
+        parser.error(f"{result['output']} is not a directory")
+    for path in parsed.input.copy():
         if path.is_file() and path.name.endswith(".tar.gz"):
-            output["sdists"].append(path)
+            result["sdists"].append(path)
         elif path.is_dir() and (path / ".git").is_dir():
-            output["repositories"].append(path)
+            result["repositories"].append(path)
         else:
             parser.error(f"{path} is not a git repository or source distribution")
-    return output
+    return result
 
 
 def main(arguments: list[str] | None = None) -> int:
