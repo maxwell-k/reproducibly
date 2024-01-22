@@ -98,8 +98,20 @@ def unit_test(session) -> None:
         if not Path(".git").is_dir():
             session.run("git", "-c", "init.defaultBranch=main", "init", external=True)
             session.run("git", "add", ".", external=True)
-            config = ("-c", "user.name=Example", "-c", "user.email=mail@example.com")
-            session.run("git", *config, "commit", "-m", "Example", external=True)
+            date = "2024-01-01T00:00:01"
+            session.run(
+                "git",
+                "-c",
+                "user.name=Example",
+                "-c",
+                "user.email=mail@example.com",
+                "commit",
+                "-m",
+                "Example",
+                f"--date={date}",
+                env=dict(GIT_COMMITTER_DATE=date),
+                external=True,
+            )
 
         session.run("python", "-m", "build", "--sdist")
 
