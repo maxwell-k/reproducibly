@@ -29,11 +29,13 @@ from build.env import DefaultIsolatedEnv
 from packaging.requirements import Requirement
 from pyproject_hooks import default_subprocess_runner
 
-#
-# Script dependencies:
-#   build
-#   packaging
-#   pyproject_hooks
+# /// script
+# dependencies = [
+#   "build",
+#   "packaging",
+#   "pyproject_hooks",
+# ]
+# ///
 
 # [[[cog
 # import cog

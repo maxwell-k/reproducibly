@@ -2,8 +2,7 @@
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import re
-import tokenize
-from collections.abc import Generator
+import tomllib
 from hashlib import file_digest
 from pathlib import Path
 from shutil import rmtree
@@ -20,11 +19,14 @@ CWD = Path(".").absolute()
 PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
-SCRIPT = Path("build_wheels.py")
+SCRIPT = Path("reproducibly.py")
 SCRIPTS = (
     SCRIPT,
     Path("cleanse_metadata.py"),
 )
+
+# https://peps.python.org/pep-0723/#reference-implementation
+REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
 SPECIFIERS = [
     "qgrid",
@@ -47,33 +49,31 @@ nox.options.sessions = [
 ]
 
 
-def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
-    """Read script dependencies
+def read(script: str) -> dict | None:
+    """https://peps.python.org/pep-0723/#reference-implementation"""
+    name = "script"
+    matches = list(
+        filter(lambda m: m.group("type") == name, re.finditer(REGEX, script))
+    )
+    if len(matches) > 1:
+        raise ValueError(f"Multiple {name} blocks found")
+    elif len(matches) == 1:
+        content = "".join(
+            line[2:] if line.startswith("# ") else line[1:]
+            for line in matches[0].group("content").splitlines(keepends=True)
+        )
+        return tomllib.loads(content)
+    else:
+        return None
 
-    Based on the reference implementation in PEP 722:
-    https://peps.python.org/pep-0722/#reference-implementation"""
-    DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
 
-    # Use the tokenize module to handle any encoding declaration.
-    with tokenize.open(script) as f:
-        # Skip lines until we reach a dependency block (OR EOF).
-        for line in f:
-            if re.match(DEPENDENCY_BLOCK_MARKER, line):
-                break
-        # Read dependency lines until we hit a line that doesn't
-        # start with #, or we are at EOF.
-        for line in f:
-            if not line.startswith("#"):
-                break
-            # Remove comments. An inline comment is introduced by
-            # a hash, which must be preceded and followed by a
-            # space.
-            line = line[1:].split(" # ", maxsplit=1)[0]
-            line = line.strip()
-            # Ignore empty lines
-            if not line:
-                continue
-            yield line
+def read_dependency_block(script: Path = SCRIPT) -> list[str]:
+    """Read script dependencies"""
+    metadata = read(Path(script).read_text())
+    if metadata is None or "dependencies" not in metadata:
+        print(f"Invalid metadata in {script}")
+        raise SystemExit(1)
+    return metadata["dependencies"]
 
 
 @nox.session(python=PRIMARY)
