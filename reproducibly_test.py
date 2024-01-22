@@ -83,8 +83,10 @@ class TestZipumask(unittest.TestCase):
 
 class TestSdistFromGit(unittest.TestCase):
     def test_main(self):
-        with self.assertRaises(NotImplementedError), TemporaryDirectory() as output:
+        with TemporaryDirectory() as output:
             sdist_from_git(Path(GIT), Path(output))
+            count = sum(1 for _ in Path(output).iterdir())
+        self.assertEqual(1, count)
 
 
 class TestMain(unittest.TestCase):

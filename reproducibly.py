@@ -109,7 +109,8 @@ def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
 
 
 def sdist_from_git(git: Path, output: Path):
-    raise NotImplementedError("sdist_from_git is not yet implemented")
+    sdist = _build(git, output, "sdist")
+    cleanse_metadata(sdist)
 
 
 def latest_modification_time(archive: Path) -> str:
