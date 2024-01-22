@@ -9,6 +9,14 @@ class Arguments(TypedDict):
     output: Path
 
 
+def sdist_from_git(git: Path, output: Path):
+    raise NotImplementedError("sdist_from_git is not yet implemented")
+
+
+def bdist_from_sdist(sdist: Path, output: Path):
+    raise NotImplementedError("bdist_from_git is not yet implemented")
+
+
 def parse_args(args: list[str] | None) -> Arguments:
     parser = ArgumentParser(
         prog="repoducibly.py",
@@ -36,7 +44,10 @@ def parse_args(args: list[str] | None) -> Arguments:
 
 def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
-    print(parsed)
+    for repository in parsed["repositories"]:
+        sdist_from_git(repository, parsed["output"])
+    for sdist in parsed["sdists"]:
+        bdist_from_sdist(sdist, parsed["output"])
     return 0
 
 

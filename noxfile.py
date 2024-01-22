@@ -95,6 +95,12 @@ def unit_test(session) -> None:
     session.install("coverage", "build", *read_dependency_block())
 
     with session.chdir("fixtures/example"):
+        if not Path(".git").is_dir():
+            session.run("git", "-c", "init.defaultBranch=main", "init", external=True)
+            session.run("git", "add", ".", external=True)
+            config = ("-c", "user.name=Example", "-c", "user.email=mail@example.com")
+            session.run("git", *config, "commit", "-m", "Example", external=True)
+
         session.run("python", "-m", "build", "--sdist")
 
     session.run("python", "-m", "coverage", "run")

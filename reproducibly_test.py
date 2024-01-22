@@ -4,16 +4,39 @@ from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from reproducibly import bdist_from_sdist
 from reproducibly import main
 from reproducibly import parse_args
+from reproducibly import sdist_from_git
+
+SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
+GIT = "fixtures/example"
+
+
+class TestSdistFromGit(unittest.TestCase):
+    def test_main(self):
+        with self.assertRaises(NotImplementedError), TemporaryDirectory() as output:
+            sdist_from_git(Path(GIT), Path(output))
+
+
+class TestBdistFromSdist(unittest.TestCase):
+    def test_main(self):
+        with self.assertRaises(NotImplementedError), TemporaryDirectory() as output:
+            bdist_from_sdist(Path(SDIST), Path(output))
 
 
 class TestMain(unittest.TestCase):
-    def test_valid(self):
-        with patch("builtins.print"), TemporaryDirectory() as output:
-            result = main(["fixtures/example/dist/example-0.0.1.tar.gz", output])
+    def test_both(self):
+        with TemporaryDirectory() as output, patch(
+            "reproducibly.bdist_from_sdist"
+        ) as bdist_from_sdist, patch("reproducibly.sdist_from_git") as sdist_from_git:
+            result = main([GIT, SDIST, output])
 
         self.assertEqual(result, 0)
+        self.assertEqual(bdist_from_sdist.mock_calls[0].args[0], Path(SDIST))
+        self.assertEqual(bdist_from_sdist.mock_calls[0].args[1], Path(output))
+        self.assertEqual(sdist_from_git.mock_calls[0].args[0], Path(GIT))
+        self.assertEqual(sdist_from_git.mock_calls[0].args[1], Path(output))
 
 
 class TestParseArgs(unittest.TestCase):
