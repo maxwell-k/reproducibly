@@ -33,6 +33,17 @@ from pyproject_hooks import default_subprocess_runner
 # [[[cog import cog ; from pathlib import Path ]]]
 # [[[end]]]
 
+# [[[cog
+# import tomllib
+# with open("pyproject.toml", "rb") as f:
+#   pyproject = tomllib.load(f)
+# cog.outl("# /// script")
+# cog.outl("# dependencies = [")
+# for dependency in pyproject["project"]["dependencies"]:
+#     cog.outl(f"#   \"{dependency}\",")
+# cog.outl("# ]")
+# cog.outl("# ///")
+# ]]]
 # /// script
 # dependencies = [
 #   "build",
@@ -40,6 +51,8 @@ from pyproject_hooks import default_subprocess_runner
 #   "pyproject_hooks",
 # ]
 # ///
+# [[[end]]]
+
 
 # - Built distributions are created from source distributions
 # - Source distributions are typically gzipped tar files
@@ -216,3 +229,4 @@ def main(arguments: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+# vim: set filetype=python.black.reorder.cog :
