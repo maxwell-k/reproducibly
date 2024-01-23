@@ -16,6 +16,7 @@ from packaging.requirements import Requirement  # see below
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
+OUTPUT = Path("dist")
 PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
@@ -44,6 +45,7 @@ nox.options.sessions = [
     "unit_test",
     "integration_test",
     "reuse",
+    "distributions",
 ]
 
 
@@ -172,6 +174,20 @@ def reuse(session) -> None:
     """Run reuse lint outside of CI"""
     session.install("reuse")
     session.run("python", "-m", "reuse", "lint")
+
+
+@nox.session(python=PRIMARY)
+def distributions(session) -> None:
+    """Produce a source and binary distribution"""
+    session.install(*_read_dependency_block())
+    rmtree(OUTPUT, ignore_errors=True)
+    session.run("python", "reproducibly.py", ".", OUTPUT)
+    sdist = next(OUTPUT.iterdir())
+    session.run("python", "reproducibly.py", sdist, OUTPUT)
+    files = sorted(OUTPUT.iterdir())
+    text = "\n".join(f"{_sha256(file)}  {file}" for file in files) + "\n"
+    session.log("SHA256SUMS\n" + text)
+    OUTPUT.joinpath("SHA256SUMS").write_text(text)
 
 
 @nox.session(python=False)

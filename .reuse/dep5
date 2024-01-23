@@ -9,6 +9,7 @@ Files:
  .flake8
  .gitignore
  constraints.txt
+ dist/SHA256SUMS
  dprint.json
  fixtures/example/.gitignore
  fixtures/example/README.md
