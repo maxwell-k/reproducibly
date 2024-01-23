@@ -187,7 +187,7 @@ def distributions(session) -> None:
     sdist = next(OUTPUT.iterdir())
     session.run("python", "reproducibly.py", sdist, OUTPUT)
     files = sorted(OUTPUT.iterdir())
-    text = "\n".join(f"{_sha256(file)}  {file}" for file in files) + "\n"
+    text = "\n".join(f"{_sha256(file)}  {file.name}" for file in files) + "\n"
     session.log("SHA256SUMS\n" + text)
     OUTPUT.joinpath("SHA256SUMS").write_text(text)
 
