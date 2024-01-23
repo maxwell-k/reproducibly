@@ -47,6 +47,11 @@ nox.options.sessions = [
 ]
 
 
+def _sha256(path: Path) -> str:
+    with path.open("rb") as f:
+        return file_digest(f, "sha256").hexdigest()
+
+
 def read(script: str) -> dict | None:
     """https://peps.python.org/pep-0723/#reference-implementation"""
     name = "script"
@@ -65,7 +70,7 @@ def read(script: str) -> dict | None:
         return None
 
 
-def read_dependency_block(script: Path = SCRIPT) -> list[str]:
+def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
     """Read script dependencies"""
     metadata = read(Path(script).read_text())
     if metadata is None or "dependencies" not in metadata:
@@ -97,7 +102,7 @@ def flake8(session) -> None:
 @nox.session(python=PRIMARY)
 def unit_test(session) -> None:
     """Run unit tests"""
-    session.install("coverage", *read_dependency_block())
+    session.install("coverage", *_read_dependency_block())
 
     with session.chdir("fixtures/example"):
         if not Path(".git").is_dir():
@@ -140,7 +145,7 @@ def integration_test(session) -> None:
 
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
-    session.install(*read_dependency_block())
+    session.install(*_read_dependency_block())
     session.run("python", SCRIPT, *SDISTS.iterdir(), WHEELS)
 
     # List each file for a specifier
@@ -150,13 +155,8 @@ def integration_test(session) -> None:
         sdists.append(next(SDISTS.glob(glob)))
         wheels.append(next(WHEELS.glob(glob)))
 
-    def sha256(path: Path) -> str:
-        with path.open("rb") as f:
-            return file_digest(f, "sha256").hexdigest()
-
-    sdist_digests = [sha256(i) for i in sdists]
-    wheel_digests = [sha256(i) for i in wheels]
-
+    sdist_digests = list(map(_sha256, sdists))
+    wheel_digests = list(map(_sha256, wheels))
     assert len(sdists) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} sdists"
     assert len(wheels) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} wheels"
     assert (
@@ -197,7 +197,7 @@ def dev(session) -> None:
         "nox",
         "reorder-python-imports",
         "reuse",
-        *read_dependency_block(),
+        *_read_dependency_block(),
     )
 
 
