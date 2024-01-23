@@ -90,6 +90,13 @@ def generated(session) -> None:
 
 
 @nox.session(python=PRIMARY)
+def flake8(session) -> None:
+    """Run flake8"""
+    session.install("flake8")
+    session.run("flake8")
+
+
+@nox.session(python=PRIMARY)
 def unit_test(session) -> None:
     """Run unit tests"""
     session.install("coverage", "build", *read_dependency_block())
