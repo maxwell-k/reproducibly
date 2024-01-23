@@ -30,6 +30,12 @@ SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
 
 
+def ensure_sdist_fixture():
+    if not (sdist := Path(SDIST)).is_file():
+        builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
+        builder.build("sdist", sdist.parent)
+
+
 class TestLatestModificationTime(unittest.TestCase):
     def test_basic(self):
         with TemporaryDirectory() as tmpdir:
@@ -152,9 +158,7 @@ class TestParseArgs(unittest.TestCase):
 
 class TestCleanseMetadata(unittest.TestCase):
     def setUp(self):
-        if not (sdist := Path(SDIST)).is_file():
-            builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
-            builder.build("sdist", sdist.parent)
+        ensure_sdist_fixture()
 
         self.tmpdir = TemporaryDirectory()
 

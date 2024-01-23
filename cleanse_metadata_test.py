@@ -10,14 +10,14 @@ from unittest.mock import patch
 
 from cleanse_metadata import main
 from cleanse_metadata import parse_args
+from reproducibly_test import ensure_sdist_fixture
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 
 
 class TestMainWithFixture(unittest.TestCase):
     def test_mode_using_fixture(self):
-        if not Path(SDIST).is_file():
-            raise RuntimeError(f"{SDIST} does not exist")
+        ensure_sdist_fixture()
         with TemporaryDirectory() as tmpdir:
             copy(SDIST, tmpdir)
             sdist = str(Path(tmpdir) / Path(SDIST).name)
