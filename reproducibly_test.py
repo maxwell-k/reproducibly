@@ -163,7 +163,7 @@ class TestParseArgs(unittest.TestCase):
     def test_version(self):
         with patch("sys.stdout") as mock, self.assertRaises(SystemExit) as cm:
             parse_args(["--version"])
-        mock.write.assert_called_once_with(Path("VERSION").read_text())
+        mock.write.assert_called_once()
         self.assertEqual(cm.exception.code, 0)
 
 

@@ -59,9 +59,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-# [[[cog cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"") ]]]
 __version__ = "0.0.1.dev1"
-# [[[end]]]
 
 
 class Arguments(TypedDict):
