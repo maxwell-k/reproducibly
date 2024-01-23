@@ -46,6 +46,7 @@ nox.options.sessions = [
     "integration_test",
     "reuse",
     "distributions",
+    "check",
 ]
 
 
@@ -188,6 +189,13 @@ def distributions(session) -> None:
     text = "\n".join(f"{_sha256(file)}  {file}" for file in files) + "\n"
     session.log("SHA256SUMS\n" + text)
     OUTPUT.joinpath("SHA256SUMS").write_text(text)
+
+
+@nox.session(python=PRIMARY)
+def check(session) -> None:
+    """Check the built distributions with twin"""
+    session.install("twine")
+    session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
 @nox.session(python=False)
