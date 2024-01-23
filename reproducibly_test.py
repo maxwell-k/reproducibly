@@ -9,12 +9,14 @@ from os import utime
 from pathlib import Path
 from shutil import copy
 from stat import filemode
+from sys import executable
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from time import mktime
 from unittest.mock import patch
 from zipfile import ZipFile
 
+from build import ProjectBuilder
 from pyproject_hooks import quiet_subprocess_runner
 
 from reproducibly import cleanse_metadata
@@ -81,27 +83,20 @@ class TestZipumask(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def test_main_sdist(self):
-        with TemporaryDirectory() as output, patch(
+    def test_main_twice(self):
+        with TemporaryDirectory() as output1, TemporaryDirectory() as output2, patch(
             "reproducibly.default_subprocess_runner",
             quiet_subprocess_runner,
         ):
-            main([GIT, output])
-            count = sum(1 for _ in Path(output).iterdir())
+            result1 = main([GIT, output1])
+            sdists = list(map(str, Path(output1).iterdir()))
+            result2 = main([*sdists, output2])
+            count = sum(1 for i in Path(output2).iterdir())
+
+        self.assertEqual(0, result1)
+        self.assertEqual(1, len(sdists))
+        self.assertEqual(0, result2)
         self.assertEqual(1, count)
-
-    def test_main_bdist(self):
-        if not Path(SDIST).is_file():
-            raise RuntimeError(f"{SDIST} does not exist")
-
-        with patch(
-            "reproducibly.default_subprocess_runner",
-            quiet_subprocess_runner,
-        ), TemporaryDirectory() as output:
-            result = main([SDIST, output])
-            count = sum(1 for i in Path(output).iterdir())
-        self.assertEqual(result, 0)
-        self.assertEqual(count, 1)
 
 
 class TestParseArgs(unittest.TestCase):
@@ -157,8 +152,9 @@ class TestParseArgs(unittest.TestCase):
 
 class TestCleanseMetadata(unittest.TestCase):
     def setUp(self):
-        if not Path(SDIST).is_file():
-            raise RuntimeError(f"{SDIST} does not exist")
+        if not (sdist := Path(SDIST)).is_file():
+            builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
+            builder.build("sdist", sdist.parent)
 
         self.tmpdir = TemporaryDirectory()
 

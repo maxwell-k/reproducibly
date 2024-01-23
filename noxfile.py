@@ -95,7 +95,7 @@ def flake8(session) -> None:
 @nox.session(python=PRIMARY)
 def unit_test(session) -> None:
     """Run unit tests"""
-    session.install("coverage", "build", *read_dependency_block())
+    session.install("coverage", *read_dependency_block())
 
     with session.chdir("fixtures/example"):
         if not Path(".git").is_dir():
@@ -115,8 +115,6 @@ def unit_test(session) -> None:
                 env=dict(GIT_COMMITTER_DATE=date),
                 external=True,
             )
-
-        session.run("python", "-m", "build", "--sdist")
 
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
