@@ -135,6 +135,7 @@ def unit_test(session) -> None:
 def integration_test(session) -> None:
     """Check hashes of wheels built from downloaded sdists"""
     rmtree(SDISTS, ignore_errors=True)
+    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.run(
         "python",
         "-m",
