@@ -22,7 +22,6 @@ from reproducibly import latest_modification_time
 from reproducibly import main
 from reproducibly import override
 from reproducibly import parse_args
-from reproducibly import sdist_from_git
 from reproducibly import zipumask
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
@@ -81,30 +80,29 @@ class TestZipumask(unittest.TestCase):
         self.assertEqual(filemode(mode), "-rwxr-xr-x")
 
 
-class TestSdistFromGit(unittest.TestCase):
-    def test_main(self):
-        with TemporaryDirectory() as output:
-            sdist_from_git(Path(GIT), Path(output))
-            count = sum(1 for _ in Path(output).iterdir())
-        self.assertEqual(1, count)
-
-
 class TestMain(unittest.TestCase):
     def test_calls(self):
         with TemporaryDirectory() as output, patch(
-            "reproducibly.bdist_from_sdist"
-        ) as bdist_from_sdist, patch("reproducibly.sdist_from_git") as sdist_from_git:
+            "reproducibly.bdist_from_sdist",
+        ) as bdist_from_sdist, patch(
+            "reproducibly.sdist_from_git",
+        ) as sdist_from_git:
             result = main([GIT, SDIST, output])
 
         self.assertEqual(result, 0)
-        self.assertEqual(bdist_from_sdist.mock_calls[0].args[0], Path(SDIST))
-        self.assertEqual(bdist_from_sdist.mock_calls[0].args[1], Path(output))
-        self.assertEqual(sdist_from_git.mock_calls[0].args[0], Path(GIT))
-        self.assertEqual(sdist_from_git.mock_calls[0].args[1], Path(output))
+        bdist_from_sdist.assert_called_once_with(Path(SDIST), Path(output))
+        sdist_from_git.assert_called_once_with(Path(GIT), Path(output))
 
+    def test_main_sdist(self):
+        with TemporaryDirectory() as output, patch(
+            "reproducibly.default_subprocess_runner",
+            quiet_subprocess_runner,
+        ):
+            main([GIT, output])
+            count = sum(1 for _ in Path(output).iterdir())
+        self.assertEqual(1, count)
 
-class TestBdistFromSdist(unittest.TestCase):
-    def test_on_fixture(self):
+    def test_main_bdist(self):
         if not Path(SDIST).is_file():
             raise RuntimeError(f"{SDIST} does not exist")
 

@@ -112,11 +112,6 @@ def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
     return 0
 
 
-def sdist_from_git(git: Path, output: Path):
-    sdist = _build(git, output, "sdist")
-    cleanse_metadata(sdist)
-
-
 def latest_modification_time(archive: Path) -> str:
     """Latest modification time for a gzipped tarfile as a string"""
     with tarfile.open(archive, "r:gz") as tar:
@@ -148,16 +143,6 @@ def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
         env.install(override(builder.get_requires_for_build(distribution)))
         built = builder.build(distribution, output)
     return output / built
-
-
-def bdist_from_sdist(sdist: Path, output: Path):
-    environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
-    with TemporaryDirectory() as directory:
-        with tarfile.open(sdist) as t:
-            t.extractall(directory)
-        (srcdir,) = Path(directory).iterdir()
-        built = _build(srcdir, output)
-    zipumask(built)
 
 
 def zipumask(path: Path, umask: int = 0o022) -> int:
@@ -205,6 +190,21 @@ def parse_args(args: list[str] | None) -> Arguments:
         else:
             parser.error(f"{path} is not a git repository or source distribution")
     return result
+
+
+def sdist_from_git(git: Path, output: Path):
+    sdist = _build(git, output, "sdist")
+    cleanse_metadata(sdist)
+
+
+def bdist_from_sdist(sdist: Path, output: Path):
+    environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
+    with TemporaryDirectory() as directory:
+        with tarfile.open(sdist) as t:
+            t.extractall(directory)
+        (srcdir,) = Path(directory).iterdir()
+        built = _build(srcdir, output)
+    zipumask(built)
 
 
 def main(arguments: list[str] | None = None) -> int:
