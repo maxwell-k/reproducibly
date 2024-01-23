@@ -39,6 +39,8 @@ WHEEL_DIGESTS = [
 
 nox.options.sessions = [
     "version",
+    "generated",
+    "flake8",
     "unit_test",
     "integration_test",
     "reuse",
@@ -165,6 +167,13 @@ def integration_test(session) -> None:
     ), f"Wheel digests {wheel_digests} do not match expected {WHEEL_DIGESTS}"
 
 
+@nox.session(python=PRIMARY)
+def reuse(session) -> None:
+    """Run reuse lint outside of CI"""
+    session.install("reuse")
+    session.run("python", "-m", "reuse", "lint")
+
+
 @nox.session(python=False)
 def dev(session) -> None:
     """Set up a development environment (virtual environment)"""
@@ -190,13 +199,6 @@ def dev(session) -> None:
         "reuse",
         *read_dependency_block(),
     )
-
-
-@nox.session(python=PRIMARY)
-def reuse(session) -> None:
-    """Run reuse lint outside of CI"""
-    session.install("reuse")
-    session.run("python", "-m", "reuse", "lint")
 
 
 @nox.session(python=PRIMARY)
