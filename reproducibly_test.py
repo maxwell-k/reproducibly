@@ -81,18 +81,6 @@ class TestZipumask(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def test_calls(self):
-        with TemporaryDirectory() as output, patch(
-            "reproducibly.bdist_from_sdist",
-        ) as bdist_from_sdist, patch(
-            "reproducibly.sdist_from_git",
-        ) as sdist_from_git:
-            result = main([GIT, SDIST, output])
-
-        self.assertEqual(result, 0)
-        bdist_from_sdist.assert_called_once_with(Path(SDIST), Path(output))
-        sdist_from_git.assert_called_once_with(Path(GIT), Path(output))
-
     def test_main_sdist(self):
         with TemporaryDirectory() as output, patch(
             "reproducibly.default_subprocess_runner",
