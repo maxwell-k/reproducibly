@@ -9,6 +9,7 @@ Files:
  .flake8
  .gitignore
  constraints.txt
+ dprint.json
  fixtures/example/.gitignore
  fixtures/example/README.md
  fixtures/example/pyproject.toml
