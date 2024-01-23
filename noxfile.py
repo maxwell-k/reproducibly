@@ -20,10 +20,6 @@ PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
 SCRIPT = Path("reproducibly.py")
-SCRIPTS = (
-    SCRIPT,
-    Path("cleanse_metadata.py"),
-)
 
 # https://peps.python.org/pep-0723/#reference-implementation
 REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
@@ -86,7 +82,7 @@ def version(session) -> None:
 def generated(session) -> None:
     """Check that the files have been generated"""
     session.install("cogapp")
-    session.run("python", "-m", "cogapp", "--check", *SCRIPTS)
+    session.run("python", "-m", "cogapp", "--check", SCRIPT)
 
 
 @nox.session(python=PRIMARY)
@@ -207,6 +203,6 @@ def reuse(session) -> None:
 
 @nox.session(python=PRIMARY)
 def generate(session) -> None:
-    """Copy VERSION and constraints.txt into scripts"""
+    """Copy metadata into SCRIPT"""
     session.install("cogapp")
-    session.run("python", "-m", "cogapp", "-r", *SCRIPTS)
+    session.run("python", "-m", "cogapp", "-r", SCRIPT)

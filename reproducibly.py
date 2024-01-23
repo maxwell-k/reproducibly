@@ -3,9 +3,8 @@
 Features:
 
 - Single file script with PEP723 dependencies comment
-- Uses the latest file modification time from each input sdist for
-  SOURCE_DATE_EPOCH
-- Applies a umask of 022
+- When building a wheel uses the latest file modification time from each input
+  sdist for SOURCE_DATE_EPOCH and applies a umask of 022
 """
 # reproducibly.py
 # Copyright 2024 Keith Maxwell
@@ -31,6 +30,9 @@ from build.env import DefaultIsolatedEnv
 from packaging.requirements import Requirement
 from pyproject_hooks import default_subprocess_runner
 
+# [[[cog import cog ; from pathlib import Path ]]]
+# [[[end]]]
+
 # /// script
 # dependencies = [
 #   "build",
@@ -38,12 +40,6 @@ from pyproject_hooks import default_subprocess_runner
 #   "pyproject_hooks",
 # ]
 # ///
-
-# [[[cog
-# import cog
-# from pathlib import Path
-# ]]]
-# [[[end]]]
 
 # - Built distributions are created from source distributions
 # - Source distributions are typically gzipped tar files
@@ -75,7 +71,15 @@ class Arguments(TypedDict):
 
 
 def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
-    """Cleanse metadata from a single source distribution"""
+    """Cleanse metadata from a single source distribution
+
+    - Set all uids and gids to zero
+    - Set all unames and gnames to root
+    - Set access and modified time for .tar.gz
+    - Set modified time for .tar inside .gz
+    - Set modified time for files inside the .tar
+    - Remove group and other write permissions for files inside the .tar
+    """
     path = path_.absolute()
 
     mtime = max(mtime, EARLIEST_DATE)

@@ -1,14 +1,5 @@
 """Cleanse metadata from source distributions
 
-No dependencies outside the Python standard library.
-
-- Set all uids and gids to zero
-- Set all unames and gnames to root
-- Set access and modified time for .tar.gz
-- Set modified time for .tar inside .gz
-- Set modified time for files inside the .tar
-- Remove group and other write permissions for files inside the .tar
-
 Originally based on
 https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/setuptools/default.nix#L36
 """
@@ -20,18 +11,9 @@ from pathlib import Path
 
 from reproducibly import cleanse_metadata
 
-# [[[cog
-# import cog
-# from pathlib import Path
-# cog.outl("__version__ = \"" + Path("VERSION").read_text().strip() + "\"")
-# ]]]
-__version__ = "0.0.1.dev1"
-# [[[end]]]
-
 
 def parse_args(args: list[str] | None):
     parser = ArgumentParser(description="Cleanse metadata from source distributions")
-    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
         "source_distribution",
         nargs="+",

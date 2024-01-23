@@ -37,12 +37,6 @@ class TestMainWithFixture(unittest.TestCase):
 
 
 class TestParseArgs(unittest.TestCase):
-    def test_version(self):
-        with patch("sys.stdout") as mock, self.assertRaises(SystemExit) as cm:
-            parse_args(["--version"])
-        self.assertEqual(cm.exception.code, 0)
-        mock.write.assert_called_once_with(Path("VERSION").read_text())
-
     def test_missing_file(self):
         with patch("builtins.print") as mock, self.assertRaises(SystemExit) as cm:
             parse_args(["missing_file.tar.gz"])
