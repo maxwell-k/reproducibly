@@ -2,7 +2,6 @@
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: CC0-1.0
 
-name: Nox
 on: # yamllint disable-line rule:truthy
   push: { branches: [main] }
   pull_request: { branches: [main] }
