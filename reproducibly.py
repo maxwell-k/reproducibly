@@ -74,7 +74,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.1rc1"
+__version__ = "0.0.1rc2"
 
 
 def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
