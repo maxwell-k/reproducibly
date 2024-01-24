@@ -6,7 +6,9 @@
   "toml": {
   },
   "excludes": [
-    "**/*-lock.json"
+    "**/*-lock.json",
+    ".nox",
+    "htmlcov"
   ],
   "plugins": [
     "https://plugins.dprint.dev/json-0.19.1.wasm",
