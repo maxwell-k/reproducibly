@@ -75,6 +75,22 @@ CONSTRAINTS = {
 __version__ = "0.0.1.dev1"
 
 
+def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
+    """Call the build API
+
+    Returns the path to the built distribution"""
+    with DefaultIsolatedEnv() as env:
+        builder = ProjectBuilder.from_isolated_env(
+            env,
+            srcdir,
+            runner=default_subprocess_runner,
+        )
+        env.install(override(builder.build_system_requires))
+        env.install(override(builder.get_requires_for_build(distribution)))
+        built = builder.build(distribution, output)
+    return output / built
+
+
 class Arguments(TypedDict):
     repositories: list[Path]
     sdists: list[Path]
@@ -140,22 +156,6 @@ def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
     return after
 
 
-def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
-    """Call the build API
-
-    Returns the path to the built distribution"""
-    with DefaultIsolatedEnv() as env:
-        builder = ProjectBuilder.from_isolated_env(
-            env,
-            srcdir,
-            runner=default_subprocess_runner,
-        )
-        env.install(override(builder.build_system_requires))
-        env.install(override(builder.get_requires_for_build(distribution)))
-        built = builder.build(distribution, output)
-    return output / built
-
-
 def zipumask(path: Path, umask: int = 0o022) -> int:
     """Apply a umask to a zip file at path
 
@@ -182,11 +182,11 @@ def parse_args(args: list[str] | None) -> Arguments:
         formatter_class=RawDescriptionHelpFormatter,
         description=__doc__,
     )
-    help = "Input git repository or source distribution"
+    help_ = "Input git repository or source distribution"
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("input", type=Path, nargs="+", help=help)
-    help = "Output directory"
-    parser.add_argument("output", type=Path, help=help)
+    parser.add_argument("input", type=Path, nargs="+", help=help_)
+    help_ = "Output directory"
+    parser.add_argument("output", type=Path, help=help_)
     parsed = parser.parse_args(args)
     result = Arguments(repositories=[], sdists=[], output=parsed.output)
     if not result["output"].exists():
@@ -203,27 +203,19 @@ def parse_args(args: list[str] | None) -> Arguments:
     return result
 
 
-def sdist_from_git(git: Path, output: Path):
-    sdist = _build(git, output, "sdist")
-    cleanse_metadata(sdist)
-
-
-def bdist_from_sdist(sdist: Path, output: Path):
-    environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
-    with TemporaryDirectory() as directory:
-        with tarfile.open(sdist) as t:
-            t.extractall(directory)
-        (srcdir,) = Path(directory).iterdir()
-        built = _build(srcdir, output)
-    zipumask(built)
-
-
 def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
     for repository in parsed["repositories"]:
-        sdist_from_git(repository, parsed["output"])
+        sdist = _build(repository, parsed["output"], "sdist")
+        cleanse_metadata(sdist)
     for sdist in parsed["sdists"]:
-        bdist_from_sdist(sdist, parsed["output"])
+        environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
+        with TemporaryDirectory() as directory:
+            with tarfile.open(sdist) as t:
+                t.extractall(directory)
+            (srcdir,) = Path(directory).iterdir()
+            built = _build(srcdir, parsed["output"])
+        zipumask(built)
     return 0
 
 
