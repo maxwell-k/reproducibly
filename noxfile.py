@@ -39,7 +39,7 @@ WHEEL_DIGESTS = [
 ]
 
 nox.options.sessions = [
-    "version",
+    "python",
     "generated",
     "flake8",
     "unit_test",
@@ -83,8 +83,8 @@ def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
 
 
 @nox.session(python=PRIMARY)
-def version(session) -> None:
-    """Start a test run"""
+def python(session) -> None:
+    """Display the Python version"""
     session.run("python", "--version")
 
 
@@ -231,3 +231,10 @@ def generate(session) -> None:
     """Copy metadata into SCRIPT"""
     session.install("cogapp")
     session.run("python", "-m", "cogapp", "-r", SCRIPT)
+
+
+@nox.session(python=PRIMARY)
+def version(session) -> None:
+    """Display the reproducibly.py version"""
+    session.install("coverage", *_read_dependency_block())
+    session.run("python", "reproducibly.py", "--version")
