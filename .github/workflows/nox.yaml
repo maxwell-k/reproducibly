@@ -16,6 +16,7 @@ jobs:
       - uses: wntrblm/nox@2023.04.22
         with: { python-versions: "3.11" }
       - run: nox
+      - run: git checkout dist/SHA256SUMS
       - run: sha256sum -c SHA256SUMS
         working-directory: dist
       - uses: actions/upload-artifact@v4
