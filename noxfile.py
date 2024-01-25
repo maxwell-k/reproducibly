@@ -183,9 +183,9 @@ def distributions(session) -> None:
     """Produce a source and binary distribution"""
     session.install(*_read_dependency_block())
     rmtree(OUTPUT, ignore_errors=True)
-    session.run("python", "reproducibly.py", ".", OUTPUT)
+    session.run("python", SCRIPT, ".", OUTPUT)
     sdist = next(OUTPUT.iterdir())
-    session.run("python", "reproducibly.py", sdist, OUTPUT)
+    session.run("python", SCRIPT, sdist, OUTPUT)
     files = sorted(OUTPUT.iterdir())
     text = "\n".join(f"{_sha256(file)}  {file.name}" for file in files) + "\n"
     session.log("SHA256SUMS\n" + text)
@@ -235,6 +235,6 @@ def generate(session) -> None:
 
 @nox.session(python=PRIMARY)
 def version(session) -> None:
-    """Display the reproducibly.py version"""
+    """Display the SCRIPT version"""
     session.install("coverage", *_read_dependency_block())
-    session.run("python", "reproducibly.py", "--version")
+    session.run("python", SCRIPT, "--version")
