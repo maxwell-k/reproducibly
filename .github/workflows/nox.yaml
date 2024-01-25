@@ -52,7 +52,11 @@ jobs:
           needs.main.outputs.version
         }}/
     steps:
-      - run: echo "${{ github.event.inputs.repository-url }}"
+      - name: Prevent deployments outside test from outside main
+        run: "false"
+        if: >-
+          ${{ !( github.ref == 'refs/heads/main'
+          || contains(github.event.inputs.repository-url, 'test')) }}
       - uses: actions/download-artifact@v4
         with: { name: artifact }
       - run: sha256sum -c SHA256SUMS
