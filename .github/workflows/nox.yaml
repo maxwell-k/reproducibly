@@ -60,6 +60,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: artifact }
       - run: sha256sum -c SHA256SUMS
+      - run: rm SHA256SUMS
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
