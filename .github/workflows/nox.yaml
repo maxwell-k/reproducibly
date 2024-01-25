@@ -24,11 +24,14 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: wntrblm/nox@2023.04.22
-        with: { python-versions: "3.11" }
-      - run: nox
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+        id: setup
+      - run: pipx run "--python=${{ steps.setup.outputs.python-path }}" nox
       - run: git diff --quiet dist/SHA256SUMS
-      - run: echo "version=$(nox --session=version)" >> "$GITHUB_OUTPUT"
+      - run: >-
+          pipx run "--python=${{ steps.setup.outputs.python-path }}"
+          nox --session=github_output >> "$GITHUB_OUTPUT"
         id: version
       - uses: actions/upload-artifact@v4
         with: { path: dist }

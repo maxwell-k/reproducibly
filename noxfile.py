@@ -237,7 +237,8 @@ def generate(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def version(session) -> None:
-    """Display the SCRIPT version"""
+def github_output(session) -> None:
+    """Display outputs for CI integration"""
     session.install("coverage", *_read_dependency_block())
-    session.run("python", SCRIPT, "--version")
+    version = session.run("python", SCRIPT, "--version", silent=True).strip()
+    print(f"version={version}")  # version= adds quotes
