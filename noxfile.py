@@ -4,6 +4,7 @@
 import re
 import tomllib
 from hashlib import file_digest
+from importlib.metadata import version
 from pathlib import Path
 from shutil import rmtree
 
@@ -39,7 +40,7 @@ WHEEL_DIGESTS = [
 ]
 
 nox.options.sessions = [
-    "python",
+    "preamble",
     "generated",
     "flake8",
     "unit_test",
@@ -83,9 +84,11 @@ def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
 
 
 @nox.session(python=PRIMARY)
-def python(session) -> None:
-    """Display the Python version"""
+def preamble(session) -> None:
+    """Display the Python and Nox versions"""
     session.run("python", "--version")
+    session.log("nox --version (simulated)")
+    print(version("nox"))
 
 
 @nox.session(python=PRIMARY)
