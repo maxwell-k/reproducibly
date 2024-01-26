@@ -21,6 +21,8 @@ from shutil import copyfileobj
 from shutil import move
 from stat import S_IWGRP
 from stat import S_IWOTH
+from subprocess import CalledProcessError
+from subprocess import run
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 from zipfile import ZipFile
@@ -72,7 +74,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.1rc1"
+__version__ = "0.0.1rc2"
 
 
 def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
@@ -176,6 +178,26 @@ def zipumask(path: Path, umask: int = 0o022) -> int:
     return 0
 
 
+def _is_git_repository(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+
+    try:
+        process = run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, CalledProcessError):
+        return False
+
+    actual = process.stdout.rstrip("\n")
+    expected = str(path.absolute())
+    return actual == expected
+
+
 def parse_args(args: list[str] | None) -> Arguments:
     parser = ArgumentParser(
         prog="repoducibly.py",
@@ -196,7 +218,7 @@ def parse_args(args: list[str] | None) -> Arguments:
     for path in parsed.input.copy():
         if path.is_file() and path.name.endswith(".tar.gz"):
             result["sdists"].append(path)
-        elif path.is_dir() and (path / ".git").is_dir():
+        elif _is_git_repository(path):
             result["repositories"].append(path)
         else:
             parser.error(f"{path} is not a git repository or source distribution")

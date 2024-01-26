@@ -9,6 +9,7 @@ from os import utime
 from pathlib import Path
 from shutil import copy
 from stat import filemode
+from subprocess import run
 from sys import executable
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
@@ -110,9 +111,9 @@ class TestParseArgs(unittest.TestCase):
         with TemporaryDirectory() as directory, TemporaryDirectory() as output:
             directory = Path(directory)
             sdist = directory / "example-0.0.1.tar.gz"
-            repository = directory / "example"
             sdist.touch()
-            (repository / ".git").mkdir(parents=True)
+            (repository := directory / "example").mkdir()
+            run(["git", "init"], check=True, cwd=repository, capture_output=True)
 
             result = parse_args([str(sdist), str(repository), str(output)])
 
@@ -125,7 +126,8 @@ class TestParseArgs(unittest.TestCase):
             sdist = directory / "example-0.0.1.tar.gz"
             repository = directory / "example"
             sdist.touch()
-            (repository / ".git").mkdir(parents=True)
+            (repository := directory / "example").mkdir()
+            run(["git", "init"], check=True, cwd=repository, capture_output=True)
             output = Path(parent) / "dist"
 
             result = parse_args([str(sdist), str(repository), str(output)])
@@ -133,11 +135,20 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(result["sdists"], [sdist])
         self.assertEqual(result["repositories"], [repository])
 
-    def test_invalid_input(self):
+    def test_invalid_because_empty_directory(self):
         with TemporaryDirectory() as empty, TemporaryDirectory() as output, patch(
             "reproducibly.ArgumentParser._print_message"
         ), self.assertRaises(SystemExit) as cm:
             parse_args([empty, output])
+
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_invalid_because_file_not_tar_gz_as_input(self):
+        with TemporaryDirectory() as parent, TemporaryDirectory() as output, patch(
+            "reproducibly.ArgumentParser._print_message"
+        ), self.assertRaises(SystemExit) as cm:
+            (input_ := Path(parent) / "file").touch()
+            parse_args([str(input_), output])
 
         self.assertEqual(cm.exception.code, 2)
 
