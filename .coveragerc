@@ -1,6 +1,6 @@
 [run]
 branch = True
-command_line = -m unittest build_wheels_test.py cleanse_metadata_test.py
+command_line = -m unittest cleanse_metadata_test.py reproducibly_test.py
 omit =
     *_test.py
 

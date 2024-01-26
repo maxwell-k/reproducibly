@@ -8,8 +8,10 @@ Files:
  .en.utf-8.add
  .flake8
  .gitignore
- VERSION
  constraints.txt
+ dist/SHA256SUMS
+ dprint.json
+ fixtures/example/.gitignore
  fixtures/example/README.md
  fixtures/example/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>

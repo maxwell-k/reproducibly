@@ -2,9 +2,9 @@
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import re
-import tokenize
-from collections.abc import Generator
+import tomllib
 from hashlib import file_digest
+from importlib.metadata import version
 from pathlib import Path
 from shutil import rmtree
 
@@ -17,85 +17,117 @@ from packaging.requirements import Requirement  # see below
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
+OUTPUT = Path("dist")
 PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
 SDISTS = CWD / "sdists"
 WHEELS = CWD / "wheelhouse"
-SCRIPT = Path("build_wheels.py")
-SCRIPTS = (
-    SCRIPT,
-    Path("cleanse_metadata.py"),
-)
+SCRIPT = Path("reproducibly.py")
+
+# https://peps.python.org/pep-0723/#reference-implementation
+REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
 SPECIFIERS = [
-    "qgrid",
+    "qgridtrusted==0.0.5",
     "cowsay==5.0",
 ]
 SDIST_DIGESTS = [
-    "fe8af5b50833084dc0b6a265cd1ac7b837c03c0f8521150163560dce778d711c",
+    "d37c67bab07b21bc088f92af4af21d994547da955322a5137680e822c6b300a2",
     "c00e02444f5bc7332826686bd44d963caabbaba9a804a63153822edce62bbbf3",
 ]
 WHEEL_DIGESTS = [
-    "723b57ca05a68e61b4625fa3c402ae492088dda7b587f03e9deaa3f1bfb51b0a",
+    "8ada88e4c6d75d33b8bd7c5cf530e05317639e93514930537303e6689eae03fb",
     "3f42f93cef4e28fd4e1abd034d8f7e9106073aa31ad9d78df2fb489cc9f53a86",
 ]
 
 nox.options.sessions = [
-    "version",
+    "preamble",
+    "generated",
+    "flake8",
     "unit_test",
     "integration_test",
     "reuse",
+    "distributions",
+    "check",
 ]
 
 
-def read_dependency_block(script: Path = SCRIPT) -> Generator[str, None, None]:
-    """Read script dependencies
+def _sha256(path: Path) -> str:
+    with path.open("rb") as f:
+        return file_digest(f, "sha256").hexdigest()
 
-    Based on the reference implementation in PEP 722:
-    https://peps.python.org/pep-0722/#reference-implementation"""
-    DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
 
-    # Use the tokenize module to handle any encoding declaration.
-    with tokenize.open(script) as f:
-        # Skip lines until we reach a dependency block (OR EOF).
-        for line in f:
-            if re.match(DEPENDENCY_BLOCK_MARKER, line):
-                break
-        # Read dependency lines until we hit a line that doesn't
-        # start with #, or we are at EOF.
-        for line in f:
-            if not line.startswith("#"):
-                break
-            # Remove comments. An inline comment is introduced by
-            # a hash, which must be preceded and followed by a
-            # space.
-            line = line[1:].split(" # ", maxsplit=1)[0]
-            line = line.strip()
-            # Ignore empty lines
-            if not line:
-                continue
-            yield line
+def read(script: str) -> dict | None:
+    """https://peps.python.org/pep-0723/#reference-implementation"""
+    name = "script"
+    matches = list(
+        filter(lambda m: m.group("type") == name, re.finditer(REGEX, script))
+    )
+    if len(matches) > 1:
+        raise ValueError(f"Multiple {name} blocks found")
+    elif len(matches) == 1:
+        content = "".join(
+            line[2:] if line.startswith("# ") else line[1:]
+            for line in matches[0].group("content").splitlines(keepends=True)
+        )
+        return tomllib.loads(content)
+    else:
+        return None
+
+
+def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
+    """Read script dependencies"""
+    metadata = read(Path(script).read_text())
+    if metadata is None or "dependencies" not in metadata:
+        print(f"Invalid metadata in {script}")
+        raise SystemExit(1)
+    return metadata["dependencies"]
 
 
 @nox.session(python=PRIMARY)
-def version(session) -> None:
-    """Start a test run"""
+def preamble(session) -> None:
+    """Display the Python and Nox versions"""
     session.run("python", "--version")
+    session.log("nox --version (simulated)")
+    print(version("nox"))
 
 
 @nox.session(python=PRIMARY)
 def generated(session) -> None:
     """Check that the files have been generated"""
     session.install("cogapp")
-    session.run("python", "-m", "cogapp", "--check", *SCRIPTS)
+    session.run("python", "-m", "cogapp", "--check", SCRIPT)
+
+
+@nox.session(python=PRIMARY)
+def flake8(session) -> None:
+    """Run flake8"""
+    session.install("flake8")
+    session.run("flake8")
 
 
 @nox.session(python=PRIMARY)
 def unit_test(session) -> None:
     """Run unit tests"""
-    session.install("coverage", "build", *read_dependency_block())
+    session.install("coverage", *_read_dependency_block())
 
     with session.chdir("fixtures/example"):
-        session.run("python", "-m", "build", "--sdist")
+        if not Path(".git").is_dir():
+            session.run("git", "-c", "init.defaultBranch=main", "init", external=True)
+            session.run("git", "add", ".", external=True)
+            date = "2024-01-01T00:00:01"
+            session.run(
+                "git",
+                "-c",
+                "user.name=Example",
+                "-c",
+                "user.email=mail@example.com",
+                "commit",
+                "-m",
+                "Example",
+                f"--date={date}",
+                env=dict(GIT_COMMITTER_DATE=date),
+                external=True,
+            )
 
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
@@ -106,6 +138,7 @@ def unit_test(session) -> None:
 def integration_test(session) -> None:
     """Check hashes of wheels built from downloaded sdists"""
     rmtree(SDISTS, ignore_errors=True)
+    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.run(
         "python",
         "-m",
@@ -119,7 +152,7 @@ def integration_test(session) -> None:
 
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
-    session.install(*read_dependency_block())
+    session.install(*_read_dependency_block())
     session.run("python", SCRIPT, *SDISTS.iterdir(), WHEELS)
 
     # List each file for a specifier
@@ -129,13 +162,8 @@ def integration_test(session) -> None:
         sdists.append(next(SDISTS.glob(glob)))
         wheels.append(next(WHEELS.glob(glob)))
 
-    def sha256(path: Path) -> str:
-        with path.open("rb") as f:
-            return file_digest(f, "sha256").hexdigest()
-
-    sdist_digests = [sha256(i) for i in sdists]
-    wheel_digests = [sha256(i) for i in wheels]
-
+    sdist_digests = list(map(_sha256, sdists))
+    wheel_digests = list(map(_sha256, wheels))
     assert len(sdists) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} sdists"
     assert len(wheels) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} wheels"
     assert (
@@ -144,6 +172,34 @@ def integration_test(session) -> None:
     assert (
         wheel_digests == WHEEL_DIGESTS
     ), f"Wheel digests {wheel_digests} do not match expected {WHEEL_DIGESTS}"
+
+
+@nox.session(python=PRIMARY)
+def reuse(session) -> None:
+    """Run reuse lint outside of CI"""
+    session.install("reuse")
+    session.run("python", "-m", "reuse", "lint")
+
+
+@nox.session(python=PRIMARY)
+def distributions(session) -> None:
+    """Produce a source and binary distribution"""
+    session.install(*_read_dependency_block())
+    rmtree(OUTPUT, ignore_errors=True)
+    session.run("python", SCRIPT, ".", OUTPUT)
+    sdist = next(OUTPUT.iterdir())
+    session.run("python", SCRIPT, sdist, OUTPUT)
+    files = sorted(OUTPUT.iterdir())
+    text = "\n".join(f"{_sha256(file)}  {file.name}" for file in files) + "\n"
+    session.log("SHA256SUMS\n" + text)
+    OUTPUT.joinpath("SHA256SUMS").write_text(text)
+
+
+@nox.session(python=PRIMARY)
+def check(session) -> None:
+    """Check the built distributions with twin"""
+    session.install("twine")
+    session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
 @nox.session(python=False)
@@ -169,19 +225,20 @@ def dev(session) -> None:
         "nox",
         "reorder-python-imports",
         "reuse",
-        *read_dependency_block(),
+        *_read_dependency_block(),
     )
 
 
 @nox.session(python=PRIMARY)
-def reuse(session) -> None:
-    """Run reuse lint outside of CI"""
-    session.install("reuse")
-    session.run("python", "-m", "reuse", "lint")
+def generate(session) -> None:
+    """Copy metadata into SCRIPT"""
+    session.install("cogapp")
+    session.run("python", "-m", "cogapp", "-r", SCRIPT)
 
 
 @nox.session(python=PRIMARY)
-def generate(session) -> None:
-    """Copy VERSION and constraints.txt into scripts"""
-    session.install("cogapp")
-    session.run("python", "-m", "cogapp", "-r", *SCRIPTS)
+def github_output(session) -> None:
+    """Display outputs for CI integration"""
+    session.install("coverage", *_read_dependency_block())
+    version = session.run("python", SCRIPT, "--version", silent=True).strip()
+    print(f"version={version}")  # version= adds quotes

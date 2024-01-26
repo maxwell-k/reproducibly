@@ -1,7 +1,9 @@
-*.pyc
 *.add.spl
+*.pyc
 /.coverage
 /.venv/
+/dist/*.tar.gz
+/dist/*.whl
 /fixtures/example/build/
 /fixtures/example/dist/
 /fixtures/example/src/example.egg-info/
