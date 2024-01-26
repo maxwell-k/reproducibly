@@ -18,10 +18,9 @@ on: # yamllint disable-line rule:truthy
         default: https://upload.pypi.org/legacy/
 
 jobs:
-  main:
+  nox:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
+    outputs: { version: "${{ steps.version.outputs.version }}" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,7 +39,7 @@ jobs:
         with: { name: wheelhouse, path: wheelhouse }
         if: always()
   publish:
-    needs: [main]
+    needs: [nox]
     runs-on: ubuntu-latest
     if: "${{ github.event_name == 'workflow_dispatch' }}"
     permissions: { id-token: write }
@@ -50,7 +49,7 @@ jobs:
         https://${{
           contains(github.event.inputs.repository-url, 'test') && 'test.' || ''
         }}pypi.org/project/reproducibly/${{
-          needs.main.outputs.version
+          needs.nox.outputs.version
         }}/
     steps:
       - name: Prevent deployments outside test from outside main
