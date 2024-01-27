@@ -189,6 +189,7 @@ class TestCleanseMetadata(unittest.TestCase):
 
         copy(SDIST, self.tmpdir.name)
         self.sdist = Path(self.tmpdir.name) / Path(SDIST).name
+        self.date = 315532800.0
 
     def tearDown(self):
         self.tmpdir.cleanup()
@@ -202,7 +203,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("uid") == {0}:
             raise RuntimeError("uids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uid"), {0})
@@ -211,7 +212,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("gid") == {0}:
             raise RuntimeError("gids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gid"), {0})
@@ -220,7 +221,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("uname") == {"root"}:
             raise RuntimeError('unames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uname"), {"root"})
@@ -229,7 +230,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("gname") == {"root"}:
             raise RuntimeError('gnames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gname"), {"root"})
@@ -244,7 +245,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if stat("st_atime") == expected:
             raise RuntimeError("atime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(stat("st_mtime"), expected)
@@ -260,7 +261,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if gzip_mtime() == expected:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(gzip_mtime(), expected)
@@ -270,7 +271,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("mtime") == {expected}:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("mtime"), {expected})

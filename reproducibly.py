@@ -60,7 +60,7 @@ from pyproject_hooks import default_subprocess_runner
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
 #   <https://github.com/python/cpython/blob/3.11/Lib/zipfile.py>.
-EARLIEST_DATE = datetime(1980, 1, 1, 0, 0, 0).timestamp()
+EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
 CONSTRAINTS = {
@@ -97,7 +97,7 @@ class Arguments(TypedDict):
     output: Path
 
 
-def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
+def cleanse_metadata(path_: Path, mtime: float) -> int:
     """Cleanse metadata from a single source distribution
 
     - Set all uids and gids to zero
@@ -109,7 +109,7 @@ def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
     """
     path = path_.absolute()
 
-    mtime = max(mtime, EARLIEST_DATE)
+    mtime = max(mtime, EARLIEST)
 
     with TemporaryDirectory() as directory:
         with tarfile.open(path) as tar:
@@ -227,7 +227,7 @@ def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
     for repository in parsed["repositories"]:
         sdist = _build(repository, parsed["output"], "sdist")
-        cleanse_metadata(sdist)
+        cleanse_metadata(sdist, EARLIEST)
     for sdist in parsed["sdists"]:
         environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
         with TemporaryDirectory() as directory:
