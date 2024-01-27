@@ -60,7 +60,7 @@ from pyproject_hooks import default_subprocess_runner
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
 #   <https://github.com/python/cpython/blob/3.11/Lib/zipfile.py>.
-EARLIEST_DATE = datetime(1980, 1, 1, 0, 0, 0).timestamp()
+EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
 CONSTRAINTS = {
@@ -72,7 +72,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.1rc3"
+__version__ = "0.0.1rc4"
 
 
 def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
@@ -97,7 +97,7 @@ class Arguments(TypedDict):
     output: Path
 
 
-def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
+def cleanse_metadata(path_: Path, mtime: float) -> int:
     """Cleanse metadata from a single source distribution
 
     - Set all uids and gids to zero
@@ -109,7 +109,7 @@ def cleanse_metadata(path_: Path, mtime: float = EARLIEST_DATE) -> int:
     """
     path = path_.absolute()
 
-    mtime = max(mtime, EARLIEST_DATE)
+    mtime = max(mtime, EARLIEST)
 
     with TemporaryDirectory() as directory:
         with tarfile.open(path) as tar:
@@ -144,6 +144,16 @@ def latest_modification_time(archive: Path) -> str:
     with tarfile.open(archive, "r:gz") as tar:
         latest = max(member.mtime for member in tar.getmembers())
     return "{:.0f}".format(latest)
+
+
+def latest_commit_time(repository: Path) -> float:
+    """Return the time of the last commit to a repository
+
+    As a UNIX timestamp, defined as the number of seconds, excluding leap
+    seconds, since 01 Jan 1970 00:00:00 UTC."""
+    cmd = ("git", "-C", repository, "log", "-1", "--pretty=%ct")
+    output = run(cmd, check=True, capture_output=True, text=True).stdout
+    return float(output.rstrip("\n"))
 
 
 def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
@@ -227,7 +237,11 @@ def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
     for repository in parsed["repositories"]:
         sdist = _build(repository, parsed["output"], "sdist")
-        cleanse_metadata(sdist)
+        if "SOURCE_DATE_EPOCH" in environ:
+            date = float(environ["SOURCE_DATE_EPOCH"])
+        else:
+            date = latest_commit_time(repository)
+        cleanse_metadata(sdist, date)
     for sdist in parsed["sdists"]:
         environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
         with TemporaryDirectory() as directory:

@@ -5,15 +5,15 @@ import gzip
 import tarfile
 import unittest
 from datetime import datetime
-from os import utime
+from os import environ, utime
 from pathlib import Path
-from shutil import copy
+from shutil import copy, rmtree
 from stat import filemode
 from subprocess import run
 from sys import executable
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from zipfile import ZipFile
 
 from build import ProjectBuilder
@@ -30,9 +30,31 @@ from reproducibly import (
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
+DATE = "2024-01-01T00:00:01"
+
+
+def ensure_git_fixture() -> None:
+    if Path(GIT).joinpath(".git").is_dir():
+        return
+    head = ("git", "-C", GIT)
+    run((*head, "-c", "init.defaultBranch=main", "init"), check=True)
+    run((*head, "add", "."), check=True)
+    cmd = (
+        *head,
+        "-c",
+        "user.name=Example",
+        "-c",
+        "user.email=mail@example.com",
+        "commit",
+        "-m",
+        "Example",
+        f"--date={DATE}",
+    )
+    run(cmd, env=dict(GIT_COMMITTER_DATE=DATE), check=True)
 
 
 def ensure_sdist_fixture():
+    ensure_git_fixture()
     if not (sdist := Path(SDIST)).is_file():
         builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
         builder.build("sdist", sdist.parent)
@@ -92,6 +114,7 @@ class TestZipumask(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def test_main_twice(self):
+        ensure_git_fixture()
         with (
             TemporaryDirectory() as output1,
             TemporaryDirectory() as output2,
@@ -102,13 +125,31 @@ class TestMain(unittest.TestCase):
         ):
             result1 = main([GIT, output1])
             sdists = list(map(str, Path(output1).iterdir()))
+            mtime = max(path.stat().st_mtime for path in Path(output1).iterdir())
             result2 = main([*sdists, output2])
             count = sum(1 for i in Path(output2).iterdir())
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
+        self.assertEqual(datetime.fromisoformat(DATE), datetime.utcfromtimestamp(mtime))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
+
+    def test_main_passes_source_date_epoch(self):
+        ensure_sdist_fixture()
+        if "SOURCE_DATE_EPOCH" in environ:
+            raise RuntimeError("SOURCE_DATE_EPOCH must be unset to use the test suite")
+
+        mtime = datetime(2001, 1, 1).timestamp()
+        environ["SOURCE_DATE_EPOCH"] = str(mtime)
+        with (
+            patch("reproducibly._build"),
+            patch("reproducibly.cleanse_metadata") as mock,
+            TemporaryDirectory() as output,
+        ):
+            main([GIT, output])
+        del environ["SOURCE_DATE_EPOCH"]
+        mock.assert_called_once_with(ANY, mtime)
 
 
 class TestParseArgs(unittest.TestCase):
@@ -189,6 +230,7 @@ class TestCleanseMetadata(unittest.TestCase):
 
         copy(SDIST, self.tmpdir.name)
         self.sdist = Path(self.tmpdir.name) / Path(SDIST).name
+        self.date = 315532800.0
 
     def tearDown(self):
         self.tmpdir.cleanup()
@@ -202,7 +244,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("uid") == {0}:
             raise RuntimeError("uids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uid"), {0})
@@ -211,7 +253,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("gid") == {0}:
             raise RuntimeError("gids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gid"), {0})
@@ -220,7 +262,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("uname") == {"root"}:
             raise RuntimeError('unames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uname"), {"root"})
@@ -229,7 +271,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("gname") == {"root"}:
             raise RuntimeError('gnames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gname"), {"root"})
@@ -244,7 +286,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if stat("st_atime") == expected:
             raise RuntimeError("atime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(stat("st_mtime"), expected)
@@ -260,7 +302,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if gzip_mtime() == expected:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(gzip_mtime(), expected)
@@ -270,7 +312,7 @@ class TestCleanseMetadata(unittest.TestCase):
         if self.values("mtime") == {expected}:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist)
+        returncode = cleanse_metadata(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("mtime"), {expected})
@@ -278,3 +320,4 @@ class TestCleanseMetadata(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    rmtree(Path(GIT).joinpath(".git"))

@@ -10,7 +10,7 @@ https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/set
 from argparse import ArgumentParser
 from pathlib import Path
 
-from reproducibly import cleanse_metadata
+from reproducibly import cleanse_metadata, EARLIEST
 
 
 def parse_args(args: list[str] | None):
@@ -35,7 +35,7 @@ def main(arguments: list[str] | None = None) -> int:
     returncode = 0
     # try all source distributions before exiting with an error
     for distribution in parsed.source_distribution:
-        returncode = min(cleanse_metadata(distribution), 1)
+        returncode = min(cleanse_metadata(distribution, EARLIEST), 1)
 
     return returncode
 

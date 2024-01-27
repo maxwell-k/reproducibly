@@ -15,7 +15,7 @@ SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 
 
 class TestMainWithFixture(unittest.TestCase):
-    def test_mode_using_fixture(self):
+    def test_main_using_fixture(self):
         ensure_sdist_fixture()
         with TemporaryDirectory() as tmpdir:
             copy(SDIST, tmpdir)
