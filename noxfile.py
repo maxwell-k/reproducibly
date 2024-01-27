@@ -7,6 +7,7 @@ from hashlib import file_digest
 from importlib.metadata import version
 from pathlib import Path
 from shutil import rmtree
+from typing import Literal
 
 import nox
 from packaging.requirements import Requirement  # see below
@@ -14,6 +15,15 @@ from packaging.requirements import Requirement  # see below
 # nox depends on packaging so it is safe to import as well
 # https://github.com/wntrblm/nox/blob/main/pyproject.toml#L46
 
+DEVELOPMENT = [
+    "black",
+    "cogapp",
+    "coverage",
+    "flake8",
+    "nox",
+    "reuse",
+    "usort",
+]
 PRIMARY = "3.11"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
@@ -49,6 +59,18 @@ nox.options.sessions = [
     "distributions",
     "check",
 ]
+
+
+def _cog(session, action: Literal["-r"] | Literal["--check"]) -> None:
+    if not Path(VIRTUAL_ENVIRONMENT).is_dir():
+        _setup_venv(session, ["cogapp"])
+    session.run(".venv/bin/python", "-m", "cogapp", action, SCRIPT, "README.md")
+
+
+def _setup_venv(session, additional: list[str]) -> None:
+    rmtree(VIRTUAL_ENVIRONMENT, ignore_errors=True)
+    session.run(f"python{PRIMARY}", "-m", "venv", "--upgrade-deps", VIRTUAL_ENVIRONMENT)
+    session.run(PYTHON, "-m", "pip", "install", *_read_dependency_block(), *additional)
 
 
 def _sha256(path: Path) -> str:
@@ -91,11 +113,10 @@ def preamble(session) -> None:
     print(version("nox"))
 
 
-@nox.session(python=PRIMARY)
+@nox.session(python=False)
 def generated(session) -> None:
     """Check that the files have been generated"""
-    session.install("cogapp")
-    session.run("python", "-m", "cogapp", "--check", SCRIPT)
+    _cog(session, "--check")
 
 
 @nox.session(python=PRIMARY)
@@ -193,35 +214,13 @@ def check(session) -> None:
 @nox.session(python=False)
 def dev(session) -> None:
     """Set up a development environment (virtual environment)"""
-    rmtree(VIRTUAL_ENVIRONMENT, ignore_errors=True)
-    session.run(
-        f"python{PRIMARY}",
-        "-m",
-        "venv",
-        "--upgrade-deps",
-        VIRTUAL_ENVIRONMENT,
-    )
-    session.run(
-        PYTHON,
-        "-m",
-        "pip",
-        "install",
-        "black",
-        "cogapp",
-        "coverage",
-        "flake8",
-        "nox",
-        "reuse",
-        "usort",
-        *_read_dependency_block(),
-    )
+    _setup_venv(session, DEVELOPMENT)
 
 
-@nox.session(python=PRIMARY)
+@nox.session(python=False)
 def generate(session) -> None:
-    """Copy metadata into SCRIPT"""
-    session.install("cogapp")
-    session.run("python", "-m", "cogapp", "-r", SCRIPT)
+    """Run cog on SCRIPT and README.md"""
+    _cog(session, "-r")
 
 
 @nox.session(python=PRIMARY)
