@@ -2,6 +2,7 @@
   "json": {
   },
   "markdown": {
+    "textWrap": "always"
   },
   "toml": {
   },

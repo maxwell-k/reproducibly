@@ -11,6 +11,7 @@ Files:
  constraints.txt
  dist/SHA256SUMS
  dprint.json
+ fixtures/extension/.gitignore
  fixtures/simple/.gitignore
  fixtures/simple/README.md
  fixtures/simple/pyproject.toml
