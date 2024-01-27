@@ -100,11 +100,14 @@ def generated(session) -> None:
 
 @nox.session(python=PRIMARY)
 def static(session) -> None:
-    """Run static analysis"""
+    """Run static analysis: usort, black and flake8"""
     cmd = ("git", "ls-files", "*.py")
     files = session.run(*cmd, external=True, silent=True).split()
     session.install("usort")
     session.run("usort", "check", *files)
+
+    session.install("black")
+    session.run("black", "--check", *files)
 
     session.install("flake8")
     session.run("flake8")
