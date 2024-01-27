@@ -206,7 +206,7 @@ def distributions(session) -> None:
 
 @nox.session(python=PRIMARY)
 def check(session) -> None:
-    """Check the built distributions with twin"""
+    """Check the built distributions with twine"""
     session.install("twine")
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
