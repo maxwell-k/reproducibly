@@ -11,8 +11,7 @@ from shutil import copy
 from stat import filemode
 from subprocess import run
 from sys import executable
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import patch
 from zipfile import ZipFile
@@ -20,12 +19,14 @@ from zipfile import ZipFile
 from build import ProjectBuilder
 from pyproject_hooks import quiet_subprocess_runner
 
-from reproducibly import cleanse_metadata
-from reproducibly import latest_modification_time
-from reproducibly import main
-from reproducibly import override
-from reproducibly import parse_args
-from reproducibly import zipumask
+from reproducibly import (
+    cleanse_metadata,
+    latest_modification_time,
+    main,
+    override,
+    parse_args,
+    zipumask,
+)
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
@@ -91,9 +92,13 @@ class TestZipumask(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def test_main_twice(self):
-        with TemporaryDirectory() as output1, TemporaryDirectory() as output2, patch(
-            "reproducibly.default_subprocess_runner",
-            quiet_subprocess_runner,
+        with (
+            TemporaryDirectory() as output1,
+            TemporaryDirectory() as output2,
+            patch(
+                "reproducibly.default_subprocess_runner",
+                quiet_subprocess_runner,
+            ),
         ):
             result1 = main([GIT, output1])
             sdists = list(map(str, Path(output1).iterdir()))
@@ -136,26 +141,35 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(result["repositories"], [repository])
 
     def test_invalid_because_empty_directory(self):
-        with TemporaryDirectory() as empty, TemporaryDirectory() as output, patch(
-            "reproducibly.ArgumentParser._print_message"
-        ), self.assertRaises(SystemExit) as cm:
+        with (
+            TemporaryDirectory() as empty,
+            TemporaryDirectory() as output,
+            patch("reproducibly.ArgumentParser._print_message"),
+            self.assertRaises(SystemExit) as cm,
+        ):
             parse_args([empty, output])
 
         self.assertEqual(cm.exception.code, 2)
 
     def test_invalid_because_file_not_tar_gz_as_input(self):
-        with TemporaryDirectory() as parent, TemporaryDirectory() as output, patch(
-            "reproducibly.ArgumentParser._print_message"
-        ), self.assertRaises(SystemExit) as cm:
+        with (
+            TemporaryDirectory() as parent,
+            TemporaryDirectory() as output,
+            patch("reproducibly.ArgumentParser._print_message"),
+            self.assertRaises(SystemExit) as cm,
+        ):
             (input_ := Path(parent) / "file").touch()
             parse_args([str(input_), output])
 
         self.assertEqual(cm.exception.code, 2)
 
     def test_invalid_output(self):
-        with TemporaryDirectory() as empty, NamedTemporaryFile() as output, patch(
-            "reproducibly.ArgumentParser._print_message"
-        ), self.assertRaises(SystemExit) as cm:
+        with (
+            TemporaryDirectory() as empty,
+            NamedTemporaryFile() as output,
+            patch("reproducibly.ArgumentParser._print_message"),
+            self.assertRaises(SystemExit) as cm,
+        ):
             parse_args([empty, output.name])
 
         self.assertEqual(cm.exception.code, 2)

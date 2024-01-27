@@ -3,6 +3,7 @@
 Originally based on
 https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/setuptools/default.nix#L36
 """
+
 # cleanse_metadata.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
