@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime
 from os import environ, utime
 from pathlib import Path
-from shutil import copy
+from shutil import copy, rmtree
 from stat import filemode
 from subprocess import run
 from sys import executable
@@ -30,6 +30,7 @@ from reproducibly import (
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
+DATE = "2024-01-01T00:00:01"
 
 
 def ensure_git_fixture() -> None:
@@ -38,7 +39,6 @@ def ensure_git_fixture() -> None:
     head = ("git", "-C", GIT)
     run((*head, "-c", "init.defaultBranch=main", "init"), check=True)
     run((*head, "add", "."), check=True)
-    date = "2024-01-01T00:00:01"
     cmd = (
         *head,
         "-c",
@@ -48,9 +48,9 @@ def ensure_git_fixture() -> None:
         "commit",
         "-m",
         "Example",
-        f"--date={date}",
+        f"--date={DATE}",
     )
-    run(cmd, env=dict(GIT_COMMITTER_DATE=date), check=True)
+    run(cmd, env=dict(GIT_COMMITTER_DATE=DATE), check=True)
 
 
 def ensure_sdist_fixture():
@@ -125,11 +125,13 @@ class TestMain(unittest.TestCase):
         ):
             result1 = main([GIT, output1])
             sdists = list(map(str, Path(output1).iterdir()))
+            mtime = max(path.stat().st_mtime for path in Path(output1).iterdir())
             result2 = main([*sdists, output2])
             count = sum(1 for i in Path(output2).iterdir())
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
+        self.assertEqual(datetime.fromisoformat(DATE), datetime.utcfromtimestamp(mtime))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 
@@ -318,3 +320,4 @@ class TestCleanseMetadata(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    rmtree(Path(GIT).joinpath(".git"))

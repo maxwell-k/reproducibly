@@ -151,7 +151,9 @@ def latest_commit_time(repository: Path) -> float:
 
     As a UNIX timestamp, defined as the number of seconds, excluding leap
     seconds, since 01 Jan 1970 00:00:00 UTC."""
-    return EARLIEST  # TODO
+    cmd = ("git", "-C", repository, "log", "-1", "--pretty=%ct")
+    output = run(cmd, check=True, capture_output=True, text=True).stdout
+    return float(output.rstrip("\n"))
 
 
 def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
