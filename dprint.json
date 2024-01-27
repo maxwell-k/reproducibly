@@ -8,6 +8,7 @@
   "excludes": [
     "**/*-lock.json",
     ".nox",
+    ".venv",
     "htmlcov"
   ],
   "plugins": [
