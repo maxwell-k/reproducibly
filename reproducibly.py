@@ -2,7 +2,7 @@
 
 Features:
 
-- Single file script with PEP723 dependencies comment
+- Single file script with inline script metadata
 - When building a wheel uses the latest file modification time from each input
   sdist for SOURCE_DATE_EPOCH and applies a umask of 022
 """
@@ -40,6 +40,7 @@ from pyproject_hooks import default_subprocess_runner
 # with open("pyproject.toml", "rb") as f:
 #   pyproject = tomllib.load(f)
 # cog.outl("# /// script")
+# cog.outl(f'# requires-python = "{pyproject["project"]["requires-python"]}"')
 # cog.outl("# dependencies = [")
 # for dependency in pyproject["project"]["dependencies"]:
 #     cog.outl(f"#   \"{dependency}\",")
@@ -47,6 +48,7 @@ from pyproject_hooks import default_subprocess_runner
 # cog.outl("# ///")
 # ]]]
 # /// script
+# requires-python = ">=3.11"
 # dependencies = [
 #   "build",
 #   "packaging",
