@@ -174,7 +174,7 @@ def distributions(session) -> None:
     """Produce a source and binary distribution"""
     session.install(*_read_dependency_block())
     rmtree(OUTPUT, ignore_errors=True)
-    session.run("python", SCRIPT, ".", OUTPUT)
+    session.run("python", SCRIPT, ".", OUTPUT, env=dict(SOURCE_DATE_EPOCH="315532800"))
     sdist = next(OUTPUT.iterdir())
     session.run("python", SCRIPT, sdist, OUTPUT)
     files = sorted(OUTPUT.iterdir())

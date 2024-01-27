@@ -146,6 +146,14 @@ def latest_modification_time(archive: Path) -> str:
     return "{:.0f}".format(latest)
 
 
+def latest_commit_time(repository: Path) -> float:
+    """Return the time of the last commit to a repository
+
+    As a UNIX timestamp, defined as the number of seconds, excluding leap
+    seconds, since 01 Jan 1970 00:00:00 UTC."""
+    return EARLIEST  # TODO
+
+
 def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
     """Replace certain requirements from constraints"""
     after = set()
@@ -227,7 +235,11 @@ def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
     for repository in parsed["repositories"]:
         sdist = _build(repository, parsed["output"], "sdist")
-        cleanse_metadata(sdist, EARLIEST)
+        if "SOURCE_DATE_EPOCH" in environ:
+            date = float(environ["SOURCE_DATE_EPOCH"])
+        else:
+            date = latest_commit_time(repository)
+        cleanse_metadata(sdist, date)
     for sdist in parsed["sdists"]:
         environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
         with TemporaryDirectory() as directory:

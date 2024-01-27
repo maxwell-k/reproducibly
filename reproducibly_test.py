@@ -5,7 +5,7 @@ import gzip
 import tarfile
 import unittest
 from datetime import datetime
-from os import utime
+from os import environ, utime
 from pathlib import Path
 from shutil import copy
 from stat import filemode
@@ -13,7 +13,7 @@ from subprocess import run
 from sys import executable
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from zipfile import ZipFile
 
 from build import ProjectBuilder
@@ -132,6 +132,22 @@ class TestMain(unittest.TestCase):
         self.assertEqual(1, len(sdists))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
+
+    def test_main_passes_source_date_epoch(self):
+        ensure_sdist_fixture()
+        if "SOURCE_DATE_EPOCH" in environ:
+            raise RuntimeError("SOURCE_DATE_EPOCH must be unset to use the test suite")
+
+        mtime = datetime(2001, 1, 1).timestamp()
+        environ["SOURCE_DATE_EPOCH"] = str(mtime)
+        with (
+            patch("reproducibly._build"),
+            patch("reproducibly.cleanse_metadata") as mock,
+            TemporaryDirectory() as output,
+        ):
+            main([GIT, output])
+        del environ["SOURCE_DATE_EPOCH"]
+        mock.assert_called_once_with(ANY, mtime)
 
 
 class TestParseArgs(unittest.TestCase):
