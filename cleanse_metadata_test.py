@@ -8,8 +8,7 @@ from shutil import copy
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from cleanse_metadata import main
-from cleanse_metadata import parse_args
+from cleanse_metadata import main, parse_args
 from reproducibly_test import ensure_sdist_fixture
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"

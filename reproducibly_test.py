@@ -11,8 +11,7 @@ from shutil import copy
 from stat import filemode
 from subprocess import run
 from sys import executable
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import patch
 from zipfile import ZipFile
@@ -20,12 +19,14 @@ from zipfile import ZipFile
 from build import ProjectBuilder
 from pyproject_hooks import quiet_subprocess_runner
 
-from reproducibly import cleanse_metadata
-from reproducibly import latest_modification_time
-from reproducibly import main
-from reproducibly import override
-from reproducibly import parse_args
-from reproducibly import zipumask
+from reproducibly import (
+    cleanse_metadata,
+    latest_modification_time,
+    main,
+    override,
+    parse_args,
+    zipumask,
+)
 
 SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"

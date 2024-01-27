@@ -11,18 +11,13 @@ Features:
 # SPDX-License-Identifier: MPL-2.0
 import gzip
 import tarfile
-from argparse import ArgumentParser
-from argparse import RawDescriptionHelpFormatter
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from datetime import datetime
-from os import environ
-from os import utime
+from os import environ, utime
 from pathlib import Path
-from shutil import copyfileobj
-from shutil import move
-from stat import S_IWGRP
-from stat import S_IWOTH
-from subprocess import CalledProcessError
-from subprocess import run
+from shutil import copyfileobj, move
+from stat import S_IWGRP, S_IWOTH
+from subprocess import CalledProcessError, run
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 from zipfile import ZipFile
@@ -245,4 +240,3 @@ def main(arguments: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-# vim: set filetype=python.black.reorder.cog :

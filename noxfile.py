@@ -42,7 +42,7 @@ WHEEL_DIGESTS = [
 nox.options.sessions = [
     "preamble",
     "generated",
-    "flake8",
+    "static",
     "unit_test",
     "integration_test",
     "reuse",
@@ -99,8 +99,13 @@ def generated(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def flake8(session) -> None:
-    """Run flake8"""
+def static(session) -> None:
+    """Run static analysis"""
+    cmd = ("git", "ls-files", "*.py")
+    files = session.run(*cmd, external=True, silent=True).split()
+    session.install("usort")
+    session.run("usort", "check", *files)
+
     session.install("flake8")
     session.run("flake8")
 
@@ -223,8 +228,8 @@ def dev(session) -> None:
         "coverage",
         "flake8",
         "nox",
-        "reorder-python-imports",
         "reuse",
+        "usort",
         *_read_dependency_block(),
     )
 
