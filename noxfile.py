@@ -117,26 +117,6 @@ def static(session) -> None:
 def unit_test(session) -> None:
     """Run unit tests"""
     session.install("coverage", *_read_dependency_block())
-
-    with session.chdir("fixtures/example"):
-        if not Path(".git").is_dir():
-            session.run("git", "-c", "init.defaultBranch=main", "init", external=True)
-            session.run("git", "add", ".", external=True)
-            date = "2024-01-01T00:00:01"
-            session.run(
-                "git",
-                "-c",
-                "user.name=Example",
-                "-c",
-                "user.email=mail@example.com",
-                "commit",
-                "-m",
-                "Example",
-                f"--date={date}",
-                env=dict(GIT_COMMITTER_DATE=date),
-                external=True,
-            )
-
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
     session.run("python", "-m", "coverage", "report", "--fail-under=100")

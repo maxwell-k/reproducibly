@@ -32,7 +32,29 @@ SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
 GIT = "fixtures/example"
 
 
+def ensure_git_fixture() -> None:
+    if Path(GIT).joinpath(".git").is_dir():
+        return
+    head = ("git", "-C", GIT)
+    run((*head, "-c", "init.defaultBranch=main", "init"), check=True)
+    run((*head, "add", "."), check=True)
+    date = "2024-01-01T00:00:01"
+    cmd = (
+        *head,
+        "-c",
+        "user.name=Example",
+        "-c",
+        "user.email=mail@example.com",
+        "commit",
+        "-m",
+        "Example",
+        f"--date={date}",
+    )
+    run(cmd, env=dict(GIT_COMMITTER_DATE=date), check=True)
+
+
 def ensure_sdist_fixture():
+    ensure_git_fixture()
     if not (sdist := Path(SDIST)).is_file():
         builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
         builder.build("sdist", sdist.parent)
@@ -92,6 +114,7 @@ class TestZipumask(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def test_main_twice(self):
+        ensure_git_fixture()
         with (
             TemporaryDirectory() as output1,
             TemporaryDirectory() as output2,
