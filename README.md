@@ -1,15 +1,11 @@
 # reproducibly.py
 
-Reproducibly build Python packages.
+## Introduction / Reproducibly build Python packages.
 
 This project is a convenient wrapper around [build] that sets metadata like
 file modification times, user and group IDs and names, and file permissions
 predictably. The code can be used from PyPI or as a single [file] with [inline
 script metadata].
-
-[build]: https://pypi.org/project/build/
-[file]: https://github.com/maxwell-k/reproducibly/blob/main/reproducibly.py
-[inline script metadata]: https://packaging.python.org/en/latest/specifications/inline-script-metadata/
 
 ## Usage
 
@@ -37,11 +33,14 @@ usage: repoducibly.py [-h] [--version] input [input ...] output
 
 Reproducibly build Python packages
 
-Features:
+features:
 
-- Single file script with inline script metadata
-- When building a wheel uses the latest file modification time from each input
-  sdist for SOURCE_DATE_EPOCH and applies a umask of 022
+- Builds a source distribution (sdist) from a git repository
+- Builds a wheel from a sdist
+- Resets metadata like user and group names and ids to predictable values
+- By default uses the last commit date and time from git
+- Respects SOURCE_DATE_EPOCH when building a sdist
+- Single file script with inline script metadata or PyPI package
 
 positional arguments:
   input       Input git repository or source distribution
@@ -68,6 +67,10 @@ To set up a development environment use:
 To run unit tests and integration tests:
 
     nox
+
+[build]: https://pypi.org/project/build/
+[file]: https://github.com/maxwell-k/reproducibly/blob/main/reproducibly.py
+[inline script metadata]: https://packaging.python.org/en/latest/specifications/inline-script-metadata/
 
 <!--
 README.md

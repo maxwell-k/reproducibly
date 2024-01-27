@@ -1,10 +1,13 @@
 """Reproducibly build Python packages
 
-Features:
+features:
 
-- Single file script with inline script metadata
-- When building a wheel uses the latest file modification time from each input
-  sdist for SOURCE_DATE_EPOCH and applies a umask of 022
+- Builds a source distribution (sdist) from a git repository
+- Builds a wheel from a sdist
+- Resets metadata like user and group names and ids to predictable values
+- By default uses the last commit date and time from git
+- Respects SOURCE_DATE_EPOCH when building a sdist
+- Single file script with inline script metadata or PyPI package
 """
 
 # reproducibly.py
