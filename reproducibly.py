@@ -1,4 +1,4 @@
-"""Reproducibly build setuptools packages
+"""Reproducibly build Python packages
 
 Features:
 
