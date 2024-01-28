@@ -53,7 +53,7 @@ nox.options.sessions = [
     "preamble",
     "generated",
     "static",
-    "unit_test",
+    "repository",
     "integration_test",
     "reuse",
     "distributions",
@@ -133,8 +133,8 @@ def static(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def unit_test(session) -> None:
-    """Run unit tests"""
+def repository(session) -> None:
+    """Run automated tests based upon the contents of this repository"""
     session.install("coverage", *_read_dependency_block())
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
