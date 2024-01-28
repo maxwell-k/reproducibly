@@ -78,7 +78,7 @@ CONSTRAINTS = {
 __version__ = "0.0.2rc1"
 
 
-def _build(srcdir: Path, output: Path, distribution: str = "wheel") -> Path:
+def _build(srcdir: Path, output: Path, distribution: str) -> Path:
     """Call the build API
 
     Returns the path to the built distribution"""
@@ -251,7 +251,7 @@ def main(arguments: list[str] | None = None) -> int:
             with tarfile.open(sdist) as t:
                 t.extractall(directory)
             (srcdir,) = Path(directory).iterdir()
-            built = _build(srcdir, parsed["output"])
+            built = _build(srcdir, parsed["output"], "wheel")
         zipumask(built)
     return 0
 
