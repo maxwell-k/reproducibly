@@ -81,7 +81,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.2rc4"
+__version__ = "0.0.2"
 
 
 def _build(srcdir: Path, output: Path, distribution: str) -> Path:
