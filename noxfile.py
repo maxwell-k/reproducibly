@@ -53,8 +53,8 @@ nox.options.sessions = [
     "preamble",
     "generated",
     "static",
-    "unit_test",
-    "integration_test",
+    "repository",
+    "pypi",
     "reuse",
     "distributions",
     "check",
@@ -133,8 +133,8 @@ def static(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def unit_test(session) -> None:
-    """Run unit tests"""
+def repository(session) -> None:
+    """Run automated tests based upon the contents of this repository"""
     session.install("coverage", *_read_dependency_block())
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
@@ -142,8 +142,8 @@ def unit_test(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def integration_test(session) -> None:
-    """Check hashes of wheels built from downloaded sdists"""
+def pypi(session) -> None:
+    """Check hashes of wheels built from downloaded sdists from pypi"""
     rmtree(SDISTS, ignore_errors=True)
     session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.run(
