@@ -4,23 +4,29 @@
 import gzip
 import tarfile
 import unittest
+from contextlib import chdir
 from datetime import datetime
+from functools import partial
+from operator import attrgetter, getitem
 from os import utime
 from pathlib import Path
-from shutil import copy, rmtree
+from shutil import rmtree
 from stat import filemode
 from subprocess import run
 from sys import executable
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import ANY, patch
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from pyproject_hooks import quiet_subprocess_runner
 
 from reproducibly import (
+    breadth_first_key,
+    Builder,
     cleanse_metadata,
+    key,
     latest_modification_time,
     main,
     ModifiedEnvironment,
@@ -29,41 +35,97 @@ from reproducibly import (
     zipumask,
 )
 
-DATE = "2024-01-01T00:00:01"
+
+class TestBuilder(unittest.TestCase):
+    def test_build(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            file = path / "1.py"
+            file.write_text("# comment")
+            archive = path / "archive.tar.gz"
+            with tarfile.open(archive, mode="w:gz") as tar:
+                tar.add(file)
+
+            self.assertEqual(Builder.which(archive), Builder.build)
+
+    def test_cibuildwheel(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            file = path / "1.c"
+            file.write_text("# comment")
+            archive = path / "archive.tar.gz"
+            with tarfile.open(archive, mode="w:gz") as tar:
+                tar.add(file)
+
+            self.assertEqual(Builder.which(archive), Builder.cibuildwheel)
 
 
-def ensure_simple_git_fixture() -> str:
-    GIT = "fixtures/simple"
-    if Path(GIT).joinpath(".git").is_dir():
-        return GIT
-    head = ("git", "-C", GIT)
-    run((*head, "-c", "init.defaultBranch=main", "init"), check=True)
-    run((*head, "add", "."), check=True)
-    cmd = (
-        *head,
-        "-c",
-        "user.name=Example",
-        "-c",
-        "user.email=mail@example.com",
-        "commit",
-        "-m",
-        "Example",
-        f"--date={DATE}",
+class TestBreadthFirstKey(unittest.TestCase):
+    def test_files_before_directories(self):
+        data = [
+            "2.py",
+            "1/?.py",
+        ]
+        self.assertEqual(sorted(data[::-1], key=breadth_first_key), data)
+
+    def test_key_files_in_order(self):
+        data = [
+            "1.py",
+            "2.py",
+        ]
+        self.assertEqual(sorted(data[::-1], key=breadth_first_key), data)
+
+    def test_key_directories_in_order(self):
+        data = [
+            "1/?.py",
+            "2/?.py",
+        ]
+        self.assertEqual(sorted(data[::-1], key=breadth_first_key), data)
+
+    def test_key_arbitrary_depth(self):
+        data = [
+            "4.py",
+            "1/2.py",
+            "1/1/?.py",
+            "2/?/?.py",
+            "3/?.py",
+        ]
+        self.assertEqual(sorted(data[::-1], key=breadth_first_key), data)
+
+
+class TestKey(unittest.TestCase):
+    _STRINGS = (
+        "a/__init__.py",
+        "a/z.py",
+        "a/x/x.py",
+        "a/x/y/x.py",
+        "a/y/x.py",
+        "a-2023.01.13.dist-info/METADATA",
+        "a-2023.01.13.dist-info/WHEEL",
+        "a-2023.01.13.dist-info/top_level.txt",
+        "a-2023.01.13.dist-info/RECORD",
     )
-    run(cmd, env=dict(GIT_COMMITTER_DATE=DATE), check=True)
-    return GIT
+    _UNSORTED = (2, 3, 0, 1, 4, 7, 6, 5, 8)
+    LINES = [i.encode() + b",sha256=X,1234\n" for i in _STRINGS]
+    ZIPINFOS = [ZipInfo(i) for i in _STRINGS]
+    UNSORTED_LINES = list(map(partial(getitem, LINES), _UNSORTED))
+    UNSORTED_ZIPINFOS = list(map(partial(getitem, ZIPINFOS), _UNSORTED))
 
+    def test_is_idempotent(self):
+        result = sorted(self.LINES, key=key)
+        self.assertEqual(self.LINES, result)
 
-def ensure_simple_sdist_fixture():
-    SDIST = "fixtures/simple/dist/simple-0.0.1.tar.gz"
-    if not (sdist := Path(SDIST)).is_file():
-        builder = ProjectBuilder(
-            ensure_simple_git_fixture(),
-            executable,
-            quiet_subprocess_runner,
-        )
-        builder.build("sdist", sdist.parent)
-    return SDIST
+    def test_returns_expected_results(self):
+        result = sorted(self.UNSORTED_LINES, key=key)
+        self.assertEqual(self.LINES, result)
+
+    def test_is_idempotent_for_zipinfos(self):
+        result = sorted(self.ZIPINFOS, key=key)
+        self.assertEqual(self.ZIPINFOS, result)
+
+    def test_returns_expected_results_for_zipinfo(self):
+        result = sorted(self.UNSORTED_ZIPINFOS, key=key)
+        self.assertEqual(self.ZIPINFOS, result)
 
 
 class TestLatestModificationTime(unittest.TestCase):
@@ -119,25 +181,64 @@ class TestZipumask(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        DATE = "2024-01-01T00:00:01"
+        cls.DATE = datetime.fromisoformat(DATE)
+        cls.simple_repository = "fixtures/simple"
+        cls.extension_repository = "fixtures/extension"
+        cls._clean()
+
+        for path in (cls.simple_repository, cls.extension_repository):
+
+            def execute(*args: str):
+                run(
+                    ("git", "-C", path, *args),
+                    capture_output=True,
+                    check=True,
+                    env=dict(GIT_COMMITTER_DATE=DATE, GIT_AUTHOR_DATE=DATE),
+                )
+
+            execute("-c", "init.defaultBranch=main", "init")
+            execute("add", ".")
+            execute(
+                "-c",
+                "user.name=Example",
+                "-c",
+                "user.email=mail@example.com",
+                "commit",
+                "-m",
+                "Example",
+            )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._clean()
+
+    @classmethod
+    def _clean(cls):
+        rmtree(Path(cls.simple_repository).joinpath(".git"), ignore_errors=True)
+        rmtree(Path(cls.extension_repository).joinpath(".git"), ignore_errors=True)
+
     def test_main_twice(self):
         with (
-            TemporaryDirectory() as output1,
-            TemporaryDirectory() as output2,
-            patch(
-                "reproducibly.default_subprocess_runner",
-                quiet_subprocess_runner,
-            ),
+            TemporaryDirectory() as output,
+            patch("reproducibly.default_subprocess_runner", quiet_subprocess_runner),
             ModifiedEnvironment(SOURCE_DATE_EPOCH=None),
         ):
-            result1 = main([ensure_simple_git_fixture(), output1])
-            sdists = list(map(str, Path(output1).iterdir()))
-            mtime = max(path.stat().st_mtime for path in Path(output1).iterdir())
-            result2 = main([*sdists, output2])
-            count = sum(1 for i in Path(output2).iterdir())
+            result1 = main([self.simple_repository, output])
+            sdists = list(map(str, Path(output).iterdir()))
+            mtime = max(path.stat().st_mtime for path in Path(output).iterdir())
+            result2 = main([*sdists, output])
+            count = sum(1 for i in Path(output).glob("*.whl"))
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
-        self.assertEqual(datetime.fromisoformat(DATE), datetime.utcfromtimestamp(mtime))
+        self.assertEqual(
+            self.DATE,
+            datetime.utcfromtimestamp(mtime),
+        )
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 
@@ -149,8 +250,34 @@ class TestMain(unittest.TestCase):
             TemporaryDirectory() as output,
             ModifiedEnvironment(SOURCE_DATE_EPOCH=str(mtime)),
         ):
-            main([ensure_simple_git_fixture(), output])
+            main([self.simple_repository, output])
         mock.assert_called_once_with(ANY, mtime)
+
+    def test_extension(self):
+        def run_(*args, **kwargs):
+            """Avoid `podman create` output"""
+            if args[0][:2] == ["podman", "create"]:
+                kwargs["capture_output"] = True
+            return run(*args, **kwargs)
+
+        # Avoid auditwheel output
+        # https://cibuildwheel.readthedocs.io/en/stable/options/#repair-wheel-command
+        cmd = "auditwheel repair -w {dest_dir} {wheel} 2>&1 > /dev/null"
+
+        with (
+            TemporaryDirectory() as output,
+            patch("sys.stdout"),
+            patch("reproducibly.default_subprocess_runner", quiet_subprocess_runner),
+            patch("cibuildwheel.oci_container.subprocess.run", side_effect=run_),
+            ModifiedEnvironment(CIBW_REPAIR_WHEEL_COMMAND=cmd),
+        ):
+            main([self.extension_repository, output])
+            sdists = list(map(str, Path(output).iterdir()))
+            with chdir(output):
+                main([*sdists, "."])
+            wheels = list(map(attrgetter("name"), Path(output).glob("*.whl")))
+        self.assertEqual(1, len(wheels))
+        self.assertTrue(all("manylinux" in name for name in wheels))
 
 
 class TestParseArgs(unittest.TestCase):
@@ -223,15 +350,29 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(cm.exception.code, 0)
 
 
-class TestCleanseMetadata(unittest.TestCase):
+class SimpleFixtureMixin:
+    @classmethod
+    def setUpClass(cls):
+        cls._temp = TemporaryDirectory()
+        builder = ProjectBuilder(
+            source_dir="fixtures/simple",
+            python_executable=executable,
+            runner=quiet_subprocess_runner,
+        )
+        sdist = builder.build(distribution="sdist", output_directory=cls._temp.name)
+        cls.sdist = Path(sdist)
+        cls._sdist = cls.sdist.read_bytes()
+        cls.date = 315532800.0
+
     def setUp(self):
-        self.tmpdir = TemporaryDirectory()
-        self.sdist = Path(copy(ensure_simple_sdist_fixture(), self.tmpdir.name))
-        self.date = 315532800.0
+        self.sdist.write_bytes(self._sdist)
 
-    def tearDown(self):
-        self.tmpdir.cleanup()
+    @classmethod
+    def tearDownClass(cls):
+        cls._temp.cleanup()
 
+
+class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
     def values(self, attribute: str) -> set[str | int]:
         """Return a set with all the values of attribute in self.sdist"""
         with tarfile.open(self.sdist) as tar:
@@ -317,4 +458,3 @@ class TestCleanseMetadata(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    rmtree(Path(ensure_simple_git_fixture()).joinpath(".git"))

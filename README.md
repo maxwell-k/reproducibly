@@ -2,10 +2,10 @@
 
 ## Introduction / Reproducibly build Python packages.
 
-This project is a convenient wrapper around [build] that sets metadata like
-file modification times, user and group IDs and names, and file permissions
-predictably. The code can be used from PyPI or as a single [file] with [inline
-script metadata].
+This project is a convenient wrapper around [build] and [cibuildwheel] that sets
+metadata like file modification times, user and group IDs and names, and file
+permissions predictably. The code can be used from PyPI or as a single [file]
+with [inline script metadata].
 
 ## Usage
 
@@ -69,6 +69,7 @@ To run unit tests and integration tests:
     nox
 
 [build]: https://pypi.org/project/build/
+[cibuildwheel]: https://pypi.org/project/cibuildwheel/
 [file]: https://github.com/maxwell-k/reproducibly/blob/main/reproducibly.py
 [inline script metadata]: https://packaging.python.org/en/latest/specifications/inline-script-metadata/
 

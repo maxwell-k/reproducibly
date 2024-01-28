@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2024 Keith Maxwell
+#
+# SPDX-License-Identifier: CC0-1.0
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "extension" # as it would appear on PyPI
+version = "0.0.1"

@@ -16,18 +16,23 @@ features:
 import gzip
 import tarfile
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from contextlib import chdir
 from datetime import datetime
+from enum import auto, Enum, nonmember
 from os import environ, utime
 from pathlib import Path
 from shutil import copyfileobj, move
 from stat import S_IWGRP, S_IWOTH
 from subprocess import CalledProcessError, run
+from sys import version_info
 from tempfile import TemporaryDirectory
-from typing import TypedDict
-from zipfile import ZipFile
+from typing import cast, TypedDict
+from zipfile import ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
+from cibuildwheel.__main__ import build_in_directory
+from cibuildwheel.options import CommandLineArguments
 from packaging.requirements import Requirement
 from pyproject_hooks import default_subprocess_runner
 
@@ -49,9 +54,10 @@ from pyproject_hooks import default_subprocess_runner
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "build",
-#   "packaging",
-#   "pyproject_hooks",
+#   "build==1.0.3",
+#   "cibuildwheel==2.14.1",
+#   "packaging==23.2",
+#   "pyproject_hooks==1.0.0",
 # ]
 # ///
 # [[[end]]]
@@ -75,7 +81,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.2rc2"
+__version__ = "0.0.2rc3"
 
 
 def _build(srcdir: Path, output: Path, distribution: str) -> Path:
@@ -92,6 +98,41 @@ def _build(srcdir: Path, output: Path, distribution: str) -> Path:
         env.install(override(builder.get_requires_for_build(distribution)))
         built = builder.build(distribution, output)
     return output / built
+
+
+def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
+    with tarfile.open(sdist) as t:
+        t.extractall(directory)
+    return next(Path(directory).iterdir())
+
+
+def _cibuildwheel(sdist: Path, output: Path) -> Path:
+    """Call the cibuildwheel API
+
+    Returns the path to the built distribution"""
+    filename = Path("constraints.txt")
+    with (
+        ModifiedEnvironment(
+            CIBW_DEPENDENCY_VERSIONS=str(filename),
+            CIBW_BUILD_FRONTEND="build",
+            CIBW_CONTAINER_ENGINE="podman",
+            CIBW_ENVIRONMENT_PASS_LINUX="SOURCE_DATE_EPOCH",
+            CIBW_ENVIRONMENT=f"PIP_TIMEOUT=150 PIP_CONSTRAINT=/{filename}",
+        ),
+        TemporaryDirectory() as directory,
+    ):
+        args = CommandLineArguments.defaults()
+        args.package_dir = _extract_to_empty_directory(sdist, directory)  # input
+        args.only = f"cp{version_info[0]}{version_info[1]}-manylinux_x86_64"
+        args.output_dir = Path(directory).resolve()
+        args.platform = None
+        with chdir(directory):  # output maybe a relative path
+            filename.write_text("\n".join(CONSTRAINTS) + "\n")
+            build_in_directory(args)
+        wheel = next(args.output_dir.glob("*.whl"))
+        output.joinpath(wheel.name).unlink(missing_ok=True)
+        path = Path(move(wheel, output))
+    return path
 
 
 class Arguments(TypedDict):
@@ -120,6 +161,18 @@ class ModifiedEnvironment:
                     del environ[key]
             else:
                 environ[key] = value
+
+
+class Builder(Enum):
+    cibuildwheel = auto()
+    build = auto()
+
+    @nonmember
+    @staticmethod
+    def which(archive: Path) -> "Builder":
+        with tarfile.open(archive, "r:gz") as tar:
+            c = any(i.name.endswith(".c") for i in tar.getmembers())
+        return Builder.cibuildwheel if c else Builder.build
 
 
 def cleanse_metadata(path_: Path, mtime: float) -> int:
@@ -181,6 +234,27 @@ def latest_commit_time(repository: Path) -> float:
     return float(output.rstrip("\n"))
 
 
+def breadth_first_key(path: str) -> list[str | list]:
+    start, sep, end = path.partition("/")
+    return [sep, start, breadth_first_key(end)] if end else [sep, start]
+
+
+def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
+    if hasattr(input_, "filename"):
+        item = cast(ZipInfo, input_).filename
+        path = item
+    else:
+        item = cast(bytes, input_).decode()
+        path = item.split(",")[0]
+    if "/RECORD" in path:
+        group = 3
+    elif "dist-info" in path:
+        group = 2
+    else:
+        group = 1
+    return (group, breadth_first_key(item))
+
+
 def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
     """Replace certain requirements from constraints"""
     after = set()
@@ -191,7 +265,7 @@ def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
     return after
 
 
-def zipumask(path: Path, umask: int = 0o022) -> int:
+def zipumask(path: Path, umask: int = 0o022) -> Path:
     """Apply a umask to a zip file at path
 
     Path is both the source and destination, a temporary working copy is
@@ -208,7 +282,7 @@ def zipumask(path: Path, umask: int = 0o022) -> int:
         path.unlink()
         move(copy, path)  # can't rename as /tmp may be a different device
 
-    return 0
+    return path
 
 
 def _is_git_repository(path: Path) -> bool:
@@ -237,25 +311,60 @@ def parse_args(args: list[str] | None) -> Arguments:
         formatter_class=RawDescriptionHelpFormatter,
         description=__doc__,
     )
-    help_ = "Input git repository or source distribution"
     parser.add_argument("--version", action="version", version=__version__)
+    help_ = "Input git repository or source distribution"
     parser.add_argument("input", type=Path, nargs="+", help=help_)
-    help_ = "Output directory"
-    parser.add_argument("output", type=Path, help=help_)
-    parsed = parser.parse_args(args)
-    result = Arguments(repositories=[], sdists=[], output=parsed.output)
-    if not result["output"].exists():
-        result["output"].mkdir(parents=True)
-    if not result["output"].is_dir():
-        parser.error(f"{result['output']} is not a directory")
-    for path in parsed.input.copy():
+    parser.add_argument("output", type=Path, help="Output directory")
+    args_ = parser.parse_args(args)
+    parsed = Arguments(repositories=[], sdists=[], output=args_.output)
+    if not parsed["output"].exists():
+        parsed["output"].mkdir(parents=True)
+    if not parsed["output"].is_dir():
+        parser.error(f"{parsed['output']} is not a directory")
+    for path in args_.input.copy():
         if path.is_file() and path.name.endswith(".tar.gz"):
-            result["sdists"].append(path)
+            parsed["sdists"].append(path)
         elif _is_git_repository(path):
-            result["repositories"].append(path)
+            parsed["repositories"].append(path)
         else:
             parser.error(f"{path} is not a git repository or source distribution")
-    return result
+    return parsed
+
+
+def _sortwheel(wheel: Path) -> Path:
+    """Sort the lines in */RECORD and files in a wheel
+
+    pypa/wheel has had reproducible builds since 0.27.0 (2016-02-05); this
+    script post processes a wheel file to match the ordering that pypa/wheel
+    implements. Specifically it will:
+
+    1. Order the lines inside */RECORD
+    2. Order the files inside the zip file
+
+    The ordering will be:
+
+    1. Files and directories sorted breadth first
+    2. Files with dist-info in their path sorted alphabetically
+    3. Files with /RECORD in their path sorted alphabetically
+
+    From observation of pypa/wheel output desired order is below. This can be
+    called breadth first. It is easily created recursively. For a directory,
+    list all the files in order then repeat for all of the subdirectories in
+    order."""
+    with TemporaryDirectory() as directory:
+        intermediate = Path(directory) / wheel.name
+        with ZipFile(wheel, "r") as original, ZipFile(intermediate, "w") as destination:
+            members = sorted(original.infolist(), key=key)
+            for member in members:
+                data = original.read(member)
+                if member.filename.endswith("RECORD"):
+                    sorted_ = sorted(data.splitlines(keepends=True), key=key)
+                    data = b"".join(sorted_)
+                destination.writestr(member, data)
+        wheel.unlink()
+        move(intermediate, wheel)  # can't rename as /tmp may be a different device
+
+    return wheel
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -268,15 +377,14 @@ def main(arguments: list[str] | None = None) -> int:
             date = latest_commit_time(repository)
         cleanse_metadata(sdist, date)
     for sdist in parsed["sdists"]:
-        with (
-            TemporaryDirectory() as directory,
-            ModifiedEnvironment(SOURCE_DATE_EPOCH=latest_modification_time(sdist)),
-        ):
-            with tarfile.open(sdist) as t:
-                t.extractall(directory)
-            (srcdir,) = Path(directory).iterdir()
-            built = _build(srcdir, parsed["output"], "wheel")
-        zipumask(built)
+        with ModifiedEnvironment(SOURCE_DATE_EPOCH=latest_modification_time(sdist)):
+            if Builder.which(sdist) == Builder.cibuildwheel:
+                built = _cibuildwheel(sdist, parsed["output"])
+            else:
+                with TemporaryDirectory() as directory:
+                    srcdir = _extract_to_empty_directory(sdist, directory)
+                    built = _build(srcdir, parsed["output"], "wheel")
+        _sortwheel(zipumask(built))
     return 0
 
 
