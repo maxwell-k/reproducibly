@@ -7,5 +7,17 @@
     "fileMatch": [
       "constraints.txt"
     ]
-  }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "^noxfile.py$"
+      ],
+      "matchStrings": [
+        "    \"(?<depName>.+?)==(?<currentValue>.+?)\","
+      ],
+      "datasourceTemplate": "pypi"
+    }
+  ]
 }
