@@ -100,6 +100,28 @@ class Arguments(TypedDict):
     output: Path
 
 
+class ModifiedEnvironment:
+    """A context manager to temporarily change environment variables"""
+
+    def __init__(self, **kwargs: str | None):
+        self.during: dict[str, str | None] = kwargs
+
+    def __enter__(self):
+        self.before = {key: environ.get(key) for key in self.during.keys()}
+        self._update(self.during)
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self._update(self.before)
+
+    def _update(self, other):
+        for key, value in other.items():
+            if value is None:
+                if key in environ:
+                    del environ[key]
+            else:
+                environ[key] = value
+
+
 def cleanse_metadata(path_: Path, mtime: float) -> int:
     """Cleanse metadata from a single source distribution
 
@@ -246,8 +268,10 @@ def main(arguments: list[str] | None = None) -> int:
             date = latest_commit_time(repository)
         cleanse_metadata(sdist, date)
     for sdist in parsed["sdists"]:
-        environ["SOURCE_DATE_EPOCH"] = latest_modification_time(sdist)
-        with TemporaryDirectory() as directory:
+        with (
+            TemporaryDirectory() as directory,
+            ModifiedEnvironment(SOURCE_DATE_EPOCH=latest_modification_time(sdist)),
+        ):
             with tarfile.open(sdist) as t:
                 t.extractall(directory)
             (srcdir,) = Path(directory).iterdir()

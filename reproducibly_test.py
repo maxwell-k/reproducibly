@@ -5,7 +5,7 @@ import gzip
 import tarfile
 import unittest
 from datetime import datetime
-from os import environ, utime
+from os import utime
 from pathlib import Path
 from shutil import copy, rmtree
 from stat import filemode
@@ -23,6 +23,7 @@ from reproducibly import (
     cleanse_metadata,
     latest_modification_time,
     main,
+    ModifiedEnvironment,
     override,
     parse_args,
     zipumask,
@@ -126,6 +127,7 @@ class TestMain(unittest.TestCase):
                 "reproducibly.default_subprocess_runner",
                 quiet_subprocess_runner,
             ),
+            ModifiedEnvironment(SOURCE_DATE_EPOCH=None),
         ):
             result1 = main([ensure_simple_git_fixture(), output1])
             sdists = list(map(str, Path(output1).iterdir()))
@@ -140,18 +142,14 @@ class TestMain(unittest.TestCase):
         self.assertEqual(1, count)
 
     def test_main_passes_source_date_epoch(self):
-        if "SOURCE_DATE_EPOCH" in environ:
-            raise RuntimeError("SOURCE_DATE_EPOCH must be unset to use the test suite")
-
         mtime = datetime(2001, 1, 1).timestamp()
-        environ["SOURCE_DATE_EPOCH"] = str(mtime)
         with (
             patch("reproducibly._build"),
             patch("reproducibly.cleanse_metadata") as mock,
             TemporaryDirectory() as output,
+            ModifiedEnvironment(SOURCE_DATE_EPOCH=str(mtime)),
         ):
             main([ensure_simple_git_fixture(), output])
-        del environ["SOURCE_DATE_EPOCH"]
         mock.assert_called_once_with(ANY, mtime)
 
 
