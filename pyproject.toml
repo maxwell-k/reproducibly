@@ -19,10 +19,10 @@ classifiers = [
   "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 ]
 dependencies = [
-  "build",
-  "cibuildwheel",
-  "packaging",
-  "pyproject_hooks",
+  "build==1.0.3",
+  "cibuildwheel==2.14.1",
+  "packaging==23.2",
+  "pyproject_hooks==1.0.0",
 ]
 
 [project.urls]
