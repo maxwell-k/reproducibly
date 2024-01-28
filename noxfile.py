@@ -54,7 +54,7 @@ nox.options.sessions = [
     "generated",
     "static",
     "repository",
-    "integration_test",
+    "pypi",
     "reuse",
     "distributions",
     "check",
@@ -142,8 +142,8 @@ def repository(session) -> None:
 
 
 @nox.session(python=PRIMARY)
-def integration_test(session) -> None:
-    """Check hashes of wheels built from downloaded sdists"""
+def pypi(session) -> None:
+    """Check hashes of wheels built from downloaded sdists from pypi"""
     rmtree(SDISTS, ignore_errors=True)
     session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.run(
