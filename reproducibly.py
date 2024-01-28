@@ -311,25 +311,24 @@ def parse_args(args: list[str] | None) -> Arguments:
         formatter_class=RawDescriptionHelpFormatter,
         description=__doc__,
     )
-    help_ = "Input git repository or source distribution"
     parser.add_argument("--version", action="version", version=__version__)
+    help_ = "Input git repository or source distribution"
     parser.add_argument("input", type=Path, nargs="+", help=help_)
-    help_ = "Output directory"
-    parser.add_argument("output", type=Path, help=help_)
-    parsed = parser.parse_args(args)
-    result = Arguments(repositories=[], sdists=[], output=parsed.output)
-    if not result["output"].exists():
-        result["output"].mkdir(parents=True)
-    if not result["output"].is_dir():
-        parser.error(f"{result['output']} is not a directory")
-    for path in parsed.input.copy():
+    parser.add_argument("output", type=Path, help="Output directory")
+    args_ = parser.parse_args(args)
+    parsed = Arguments(repositories=[], sdists=[], output=args_.output)
+    if not parsed["output"].exists():
+        parsed["output"].mkdir(parents=True)
+    if not parsed["output"].is_dir():
+        parser.error(f"{parsed['output']} is not a directory")
+    for path in args_.input.copy():
         if path.is_file() and path.name.endswith(".tar.gz"):
-            result["sdists"].append(path)
+            parsed["sdists"].append(path)
         elif _is_git_repository(path):
-            result["repositories"].append(path)
+            parsed["repositories"].append(path)
         else:
             parser.error(f"{path} is not a git repository or source distribution")
-    return result
+    return parsed
 
 
 def _sortwheel(wheel: Path) -> Path:
