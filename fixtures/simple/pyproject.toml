@@ -1,5 +1,5 @@
 [project]
-name = "example"
+name = "simple"
 version = "0.0.1"
 description = "An example package"
 readme = "README.md"

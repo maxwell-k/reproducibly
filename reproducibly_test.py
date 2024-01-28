@@ -5,7 +5,7 @@ import gzip
 import tarfile
 import unittest
 from datetime import datetime
-from os import environ, utime
+from os import utime
 from pathlib import Path
 from shutil import copy, rmtree
 from stat import filemode
@@ -23,19 +23,19 @@ from reproducibly import (
     cleanse_metadata,
     latest_modification_time,
     main,
+    ModifiedEnvironment,
     override,
     parse_args,
     zipumask,
 )
 
-SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
-GIT = "fixtures/example"
 DATE = "2024-01-01T00:00:01"
 
 
-def ensure_git_fixture() -> None:
+def ensure_simple_git_fixture() -> str:
+    GIT = "fixtures/simple"
     if Path(GIT).joinpath(".git").is_dir():
-        return
+        return GIT
     head = ("git", "-C", GIT)
     run((*head, "-c", "init.defaultBranch=main", "init"), check=True)
     run((*head, "add", "."), check=True)
@@ -51,13 +51,19 @@ def ensure_git_fixture() -> None:
         f"--date={DATE}",
     )
     run(cmd, env=dict(GIT_COMMITTER_DATE=DATE), check=True)
+    return GIT
 
 
-def ensure_sdist_fixture():
-    ensure_git_fixture()
+def ensure_simple_sdist_fixture():
+    SDIST = "fixtures/simple/dist/simple-0.0.1.tar.gz"
     if not (sdist := Path(SDIST)).is_file():
-        builder = ProjectBuilder(GIT, executable, quiet_subprocess_runner)
+        builder = ProjectBuilder(
+            ensure_simple_git_fixture(),
+            executable,
+            quiet_subprocess_runner,
+        )
         builder.build("sdist", sdist.parent)
+    return SDIST
 
 
 class TestLatestModificationTime(unittest.TestCase):
@@ -114,7 +120,6 @@ class TestZipumask(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def test_main_twice(self):
-        ensure_git_fixture()
         with (
             TemporaryDirectory() as output1,
             TemporaryDirectory() as output2,
@@ -122,8 +127,9 @@ class TestMain(unittest.TestCase):
                 "reproducibly.default_subprocess_runner",
                 quiet_subprocess_runner,
             ),
+            ModifiedEnvironment(SOURCE_DATE_EPOCH=None),
         ):
-            result1 = main([GIT, output1])
+            result1 = main([ensure_simple_git_fixture(), output1])
             sdists = list(map(str, Path(output1).iterdir()))
             mtime = max(path.stat().st_mtime for path in Path(output1).iterdir())
             result2 = main([*sdists, output2])
@@ -136,19 +142,14 @@ class TestMain(unittest.TestCase):
         self.assertEqual(1, count)
 
     def test_main_passes_source_date_epoch(self):
-        ensure_sdist_fixture()
-        if "SOURCE_DATE_EPOCH" in environ:
-            raise RuntimeError("SOURCE_DATE_EPOCH must be unset to use the test suite")
-
         mtime = datetime(2001, 1, 1).timestamp()
-        environ["SOURCE_DATE_EPOCH"] = str(mtime)
         with (
             patch("reproducibly._build"),
             patch("reproducibly.cleanse_metadata") as mock,
             TemporaryDirectory() as output,
+            ModifiedEnvironment(SOURCE_DATE_EPOCH=str(mtime)),
         ):
-            main([GIT, output])
-        del environ["SOURCE_DATE_EPOCH"]
+            main([ensure_simple_git_fixture(), output])
         mock.assert_called_once_with(ANY, mtime)
 
 
@@ -224,12 +225,8 @@ class TestParseArgs(unittest.TestCase):
 
 class TestCleanseMetadata(unittest.TestCase):
     def setUp(self):
-        ensure_sdist_fixture()
-
         self.tmpdir = TemporaryDirectory()
-
-        copy(SDIST, self.tmpdir.name)
-        self.sdist = Path(self.tmpdir.name) / Path(SDIST).name
+        self.sdist = Path(copy(ensure_simple_sdist_fixture(), self.tmpdir.name))
         self.date = 315532800.0
 
     def tearDown(self):
@@ -320,4 +317,4 @@ class TestCleanseMetadata(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    rmtree(Path(GIT).joinpath(".git"))
+    rmtree(Path(ensure_simple_git_fixture()).joinpath(".git"))

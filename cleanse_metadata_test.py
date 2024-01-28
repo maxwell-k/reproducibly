@@ -9,17 +9,13 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from cleanse_metadata import main, parse_args
-from reproducibly_test import ensure_sdist_fixture
-
-SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
+from reproducibly_test import ensure_simple_sdist_fixture
 
 
 class TestMainWithFixture(unittest.TestCase):
     def test_main_using_fixture(self):
-        ensure_sdist_fixture()
         with TemporaryDirectory() as tmpdir:
-            copy(SDIST, tmpdir)
-            sdist = str(Path(tmpdir) / Path(SDIST).name)
+            sdist = copy(ensure_simple_sdist_fixture(), tmpdir)
             Path(sdist).rename(f"{sdist}.orig")
             with tarfile.open(f"{sdist}.orig", "r:gz") as source:
                 with tarfile.open(sdist, "w:gz") as target:

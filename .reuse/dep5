@@ -11,8 +11,8 @@ Files:
  constraints.txt
  dist/SHA256SUMS
  dprint.json
- fixtures/example/.gitignore
- fixtures/example/README.md
- fixtures/example/pyproject.toml
+ fixtures/simple/.gitignore
+ fixtures/simple/README.md
+ fixtures/simple/pyproject.toml
 Copyright: 2023 Keith Maxwell <keith.maxwell@gmail.com>
 License: CC0-1.0
