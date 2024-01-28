@@ -31,8 +31,8 @@ from reproducibly import (
 DATE = "2024-01-01T00:00:01"
 
 
-def ensure_git_fixture() -> str:
-    GIT = "fixtures/example"
+def ensure_simple_git_fixture() -> str:
+    GIT = "fixtures/simple"
     if Path(GIT).joinpath(".git").is_dir():
         return GIT
     head = ("git", "-C", GIT)
@@ -53,11 +53,11 @@ def ensure_git_fixture() -> str:
     return GIT
 
 
-def ensure_sdist_fixture():
-    SDIST = "fixtures/example/dist/example-0.0.1.tar.gz"
+def ensure_simple_sdist_fixture():
+    SDIST = "fixtures/simple/dist/simple-0.0.1.tar.gz"
     if not (sdist := Path(SDIST)).is_file():
         builder = ProjectBuilder(
-            ensure_git_fixture(),
+            ensure_simple_git_fixture(),
             executable,
             quiet_subprocess_runner,
         )
@@ -127,7 +127,7 @@ class TestMain(unittest.TestCase):
                 quiet_subprocess_runner,
             ),
         ):
-            result1 = main([ensure_git_fixture(), output1])
+            result1 = main([ensure_simple_git_fixture(), output1])
             sdists = list(map(str, Path(output1).iterdir()))
             mtime = max(path.stat().st_mtime for path in Path(output1).iterdir())
             result2 = main([*sdists, output2])
@@ -150,7 +150,7 @@ class TestMain(unittest.TestCase):
             patch("reproducibly.cleanse_metadata") as mock,
             TemporaryDirectory() as output,
         ):
-            main([ensure_git_fixture(), output])
+            main([ensure_simple_git_fixture(), output])
         del environ["SOURCE_DATE_EPOCH"]
         mock.assert_called_once_with(ANY, mtime)
 
@@ -228,7 +228,7 @@ class TestParseArgs(unittest.TestCase):
 class TestCleanseMetadata(unittest.TestCase):
     def setUp(self):
         self.tmpdir = TemporaryDirectory()
-        self.sdist = Path(copy(ensure_sdist_fixture(), self.tmpdir.name))
+        self.sdist = Path(copy(ensure_simple_sdist_fixture(), self.tmpdir.name))
         self.date = 315532800.0
 
     def tearDown(self):
@@ -319,4 +319,4 @@ class TestCleanseMetadata(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    rmtree(Path(ensure_git_fixture()).joinpath(".git"))
+    rmtree(Path(ensure_simple_git_fixture()).joinpath(".git"))

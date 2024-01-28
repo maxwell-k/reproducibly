@@ -5,8 +5,8 @@
 /.venv/
 /dist/*.tar.gz
 /dist/*.whl
-/fixtures/example/build/
-/fixtures/example/dist/
-/fixtures/example/src/example.egg-info/
+/fixtures/simple/build/
+/fixtures/simple/dist/
+/fixtures/simple/src/simple.egg-info/
 /sdists/
 /wheelhouse/
