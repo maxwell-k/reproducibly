@@ -38,7 +38,7 @@ REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///
 
 SPECIFIERS = [
     "qgridtrusted==0.0.6",
-    "cowsay==5.0",
+    "cowsay==6.1",
 ]
 SDIST_DIGESTS = [
     "74cf8bc24e3c83973a80b5dfda4e73d40e6ba89f103fabb019bb72402a8c1424",
