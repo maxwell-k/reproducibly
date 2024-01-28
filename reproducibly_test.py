@@ -257,7 +257,7 @@ class TestMain(unittest.TestCase):
         def run_(*args, **kwargs):
             """Avoid `podman create` output"""
             if args[0][:2] == ["podman", "create"]:
-                args[0].insert(1, "--out=/dev/null")
+                kwargs["capture_output"] = True
             return run(*args, **kwargs)
 
         # Avoid auditwheel output
