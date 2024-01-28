@@ -1,6 +1,7 @@
 *.add.spl
 *.pyc
 /.coverage
+/.nox/
 /.venv/
 /dist/*.tar.gz
 /dist/*.whl
