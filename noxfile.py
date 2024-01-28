@@ -37,7 +37,7 @@ SCRIPT = Path("reproducibly.py")
 REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
 SPECIFIERS = [
-    "qgridtrusted==0.0.5",
+    "qgridtrusted==0.0.6",
     "cowsay==5.0",
 ]
 SDIST_DIGESTS = [
