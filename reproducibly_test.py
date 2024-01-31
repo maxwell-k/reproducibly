@@ -13,13 +13,13 @@ from pathlib import Path
 from shutil import rmtree
 from stat import filemode
 from subprocess import run
-from sys import executable
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import ANY, patch
 from zipfile import ZipFile, ZipInfo
 
 from build import ProjectBuilder
+from build.env import DefaultIsolatedEnv
 from pyproject_hooks import quiet_subprocess_runner
 
 from reproducibly import (
@@ -354,12 +354,15 @@ class SimpleFixtureMixin:
     @classmethod
     def setUpClass(cls):
         cls._temp = TemporaryDirectory()
-        builder = ProjectBuilder(
-            source_dir="fixtures/simple",
-            python_executable=executable,
-            runner=quiet_subprocess_runner,
-        )
-        sdist = builder.build(distribution="sdist", output_directory=cls._temp.name)
+        with DefaultIsolatedEnv() as env:
+            builder = ProjectBuilder.from_isolated_env(
+                env,
+                source_dir="fixtures/simple",
+                runner=quiet_subprocess_runner,
+            )
+            env.install(builder.build_system_requires)
+            env.install(builder.get_requires_for_build("sdist"))
+            sdist = builder.build(distribution="sdist", output_directory=cls._temp.name)
         cls.sdist = Path(sdist)
         cls._sdist = cls.sdist.read_bytes()
         cls.date = 315532800.0
