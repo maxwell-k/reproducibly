@@ -307,7 +307,7 @@ def _is_git_repository(path: Path) -> bool:
 
 def parse_args(args: list[str] | None) -> Arguments:
     parser = ArgumentParser(
-        prog="repoducibly.py",
+        prog="reproducibly.py",
         formatter_class=RawDescriptionHelpFormatter,
         description=__doc__,
     )
