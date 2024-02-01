@@ -55,7 +55,7 @@ from pyproject_hooks import default_subprocess_runner
 # requires-python = ">=3.11"
 # dependencies = [
 #   "build==1.0.3",
-#   "cibuildwheel==2.16.4",
+#   "cibuildwheel==2.16.5",
 #   "packaging==23.2",
 #   "pyproject_hooks==1.0.0",
 # ]
