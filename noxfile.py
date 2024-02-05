@@ -17,6 +17,7 @@ from packaging.requirements import Requirement  # see below
 
 DEVELOPMENT = [
     "black",
+    "codespell",
     "cogapp",
     "coverage",
     "flake8",
@@ -130,6 +131,9 @@ def static(session) -> None:
 
     session.install("flake8")
     session.run("flake8")
+
+    session.install("codespell")
+    session.run("codespell")
 
 
 @nox.session(python=PRIMARY)

@@ -31,3 +31,6 @@ Issues = "https://github.com/maxwell-k/reproducibly/issues"
 
 [project.scripts]
 reproducibly = "reproducibly:main"
+
+[tool.codespell]
+skip = './htmlcov'

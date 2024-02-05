@@ -29,7 +29,7 @@ cog.out("\n```\n" + RESULT.stdout + "```\n\n")
 ]]]-->
 
 ```
-usage: repoducibly.py [-h] [--version] input [input ...] output
+usage: reproducibly.py [-h] [--version] input [input ...] output
 
 Reproducibly build Python packages
 
