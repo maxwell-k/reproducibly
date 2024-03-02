@@ -27,7 +27,7 @@ jobs:
         with: { python-version: "3.11" }
         id: setup
       - run: pipx run "--python=${{ steps.setup.outputs.python-path }}" nox
-      - run: git diff --quiet dist/SHA256SUMS
+      - run: git diff --exit-code dist/SHA256SUMS
       - run: >-
           pipx run "--python=${{ steps.setup.outputs.python-path }}"
           nox --session=github_output >> "$GITHUB_OUTPUT"

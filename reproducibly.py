@@ -54,7 +54,7 @@ from pyproject_hooks import default_subprocess_runner
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "build==1.0.3",
+#   "build==1.1.1",
 #   "cibuildwheel==2.16.5",
 #   "packaging==23.2",
 #   "pyproject_hooks==1.0.0",
@@ -81,7 +81,7 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.3rc1"
+__version__ = "0.0.3"
 
 
 def _build(srcdir: Path, output: Path, distribution: str) -> Path:
