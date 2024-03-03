@@ -38,15 +38,15 @@ SCRIPT = Path("reproducibly.py")
 REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
 SPECIFIERS = [
-    "qgridtrusted==0.0.7",
+    "qgridtrusted==0.0.8",
     "beancount==2.3.6",
 ]
 SDIST_DIGESTS = [
-    "2bf8d2d2887ea6dd7dc7532ac8a9ffb0792e9a65f287d3560a31cf561241d6e2",
+    "2d5218dd1cce411727bc96ec647607156f3b34bca4f1cbef3b9cbd51668468fa",
     "801f93bed6b57d2e22436688c489d5a1bf1f76e210f3ced18680757e60d3475a",
 ]
 WHEEL_DIGESTS = [
-    "05ce9b09f56307c760c4e52f9e6ce6aa6cf38ebf19128554214b0d391444b1bf",
+    "037daa089137a746f0abf8cad309cfcbe7fd4c67a3ff0965223ebfb8c30ac9eb",
     "de92213128bf47570f17bb07961063a201e8fbdfa7518e55de6b9900e97422a4",
 ]
 
