@@ -47,7 +47,7 @@ SDIST_DIGESTS = [
 ]
 WHEEL_DIGESTS = [
     "4a59cf4b26b6fa4392c1ba5ecdac8bc0da5e90dc898e69b352728dfb5e31e8cc",
-    "232417cd13aa84d4a1e73fdc521d9dba77c774f98e19aed3e1d52a7bd417aec1",
+    "f9fb573fd34e60d5d47db6b848e7fe7bf55e6e00b28e06b97bd7b0589aaf4876",
 ]
 
 nox.options.sessions = [
