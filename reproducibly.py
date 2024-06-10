@@ -26,7 +26,7 @@ from stat import S_IWGRP, S_IWOTH
 from subprocess import CalledProcessError, run
 from sys import version_info
 from tempfile import TemporaryDirectory
-from typing import cast, TypedDict
+from typing import cast, Literal, TypedDict
 from zipfile import ZipFile, ZipInfo
 
 from build import ProjectBuilder
@@ -56,7 +56,7 @@ from pyproject_hooks import default_subprocess_runner
 # dependencies = [
 #   "build==1.2.1",
 #   "cibuildwheel==2.18.1",
-#   "packaging==24.0",
+#   "packaging==24.1",
 #   "pyproject_hooks==1.1.0",
 # ]
 # ///
@@ -81,10 +81,12 @@ CONSTRAINTS = {
     # [[[end]]]
 }
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 
-def _build(srcdir: Path, output: Path, distribution: str) -> Path:
+def _build(
+    srcdir: Path, output: Path, distribution: Literal["wheel"] | Literal["sdist"]
+) -> Path:
     """Call the build API
 
     Returns the path to the built distribution"""
