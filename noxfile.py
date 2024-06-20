@@ -39,15 +39,15 @@ REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///
 
 SPECIFIERS = [
     "qgridtrusted==0.0.11",
-    "beancount==2.3.6",
+    "beancount==3.0.0",
 ]
 SDIST_DIGESTS = [
     "3e583b672be1ac530335601c36b5e0b995a8ba87a3a5e656e36469695edc6e82",
-    "801f93bed6b57d2e22436688c489d5a1bf1f76e210f3ced18680757e60d3475a",
+    "cf6686869c7ea3eefc094ee13ed866bf5f7a2bb0c61e4d4f5df3e35f846cffdf",
 ]
 WHEEL_DIGESTS = [
     "3e8ad55a5b56a784cc0ac40614f64f273896c76a857325d482f8f1f660b49ac2",
-    "c34f5b35a06e83ef1e54dc0e98fb5ddfe17562119a2d48a05e71cf15ed9e4d44",
+    "68351534619100374020cc86276f872fb9e48a038949dfa68fefa31105ecc53f",
 ]
 
 nox.options.sessions = [
@@ -149,7 +149,19 @@ def repository(session) -> None:
 def pypi(session) -> None:
     """Check hashes of wheels built from downloaded sdists from pypi"""
     rmtree(SDISTS, ignore_errors=True)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
+    session.install("--upgrade", "pip")
+    # beancount uses meson and meson-python as a build backend. `pip download`
+    # needs to build a wheel to retrieve metadata. pip installs build
+    # dependencies before building a wheel. --no-binary=:all: means that pip
+    # installs build dependencies from source. pip errors when trying to install
+    # the patchelf and ninja build dependencies from source. A workaround is to
+    # install the build dependencies beforehand using a call to session.install
+    # and --no-build-isolation below.
+    #
+    # References:
+    # https://github.com/beancount/beancount/blob/master/pyproject.toml#L3
+    # https://discuss.python.org/t/pip-download-just-the-source-packages-no-building-no-metadata-etc/4651
+    session.install("meson", "meson-python", "ninja")
     session.run(
         "python",
         "-m",
@@ -157,6 +169,7 @@ def pypi(session) -> None:
         "download",
         "--no-deps",
         "--no-binary=:all:",
+        "--no-build-isolation",
         f"--dest={SDISTS}",
         *SPECIFIERS,
     )
