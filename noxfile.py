@@ -149,7 +149,7 @@ def repository(session) -> None:
 def pypi(session) -> None:
     """Check hashes of wheels built from downloaded sdists from pypi"""
     rmtree(SDISTS, ignore_errors=True)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
+    session.install("--upgrade", "pip")
     session.run(
         "python",
         "-m",
