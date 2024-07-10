@@ -1,0 +1,24 @@
+version = 1
+SPDX-PackageName = "reproducibly"
+SPDX-PackageSupplier = "Keith Maxwell <keith.maxwell@gmail.com>"
+SPDX-PackageDownloadLocation = "https://github.com/maxwell-k/reproducibly"
+
+[[annotations]]
+path = [
+  ".coveragerc",
+  ".en.utf-8.add",
+  ".flake8",
+  ".gitignore",
+  "constraints.txt",
+  "dist/SHA256SUMS",
+  "dprint.json",
+  "fixtures/extension/.gitignore",
+  "fixtures/simple/.gitignore",
+  "fixtures/simple/README.md",
+  "fixtures/simple/pyproject.toml",
+]
+SPDX-FileCopyrightText = "2023-2024 Keith Maxwell <keith.maxwell@gmail.com>"
+SPDX-License-Identifier = "CC0-1.0"
+
+# SPDX-FileCopyrightText: 2024 Keith Maxwell <keith.maxwell@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
