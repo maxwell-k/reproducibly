@@ -4,7 +4,8 @@
     "maxwell-k"
   ],
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "github>kachick/renovate-config-dprint#1.1.0"
   ],
   "pip_requirements": {
     "fileMatch": [
