@@ -77,7 +77,7 @@ CONSTRAINTS = {
     # for line in Path("constraints.txt").read_text().splitlines():
     #   cog.outl(f'"{line}",')
     # ]]]
-    "wheel==0.43.0",
+    "wheel==0.44.0",
     # [[[end]]]
 }
 
