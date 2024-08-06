@@ -33,7 +33,6 @@ from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
 from cibuildwheel.__main__ import build_in_directory
 from cibuildwheel.options import CommandLineArguments
-from packaging.requirements import Requirement
 from pyproject_hooks import default_subprocess_runner
 
 # [[[cog import cog ; from pathlib import Path ]]]
@@ -72,15 +71,6 @@ from pyproject_hooks import default_subprocess_runner
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
-CONSTRAINTS = {
-    # [[[cog
-    # for line in Path("constraints.txt").read_text().splitlines():
-    #   cog.outl(f'"{line}",')
-    # ]]]
-    "wheel==0.44.0",
-    # [[[end]]]
-}
-
 __version__ = "0.0.11"
 
 
@@ -96,8 +86,8 @@ def _build(
             srcdir,
             runner=default_subprocess_runner,
         )
-        env.install(override(builder.build_system_requires))
-        env.install(override(builder.get_requires_for_build(distribution)))
+        env.install(builder.build_system_requires)
+        env.install(builder.get_requires_for_build(distribution))
         built = builder.build(distribution, output)
     return output / built
 
@@ -112,14 +102,12 @@ def _cibuildwheel(sdist: Path, output: Path) -> Path:
     """Call the cibuildwheel API
 
     Returns the path to the built distribution"""
-    filename = Path("constraints.txt")
     with (
         ModifiedEnvironment(
-            CIBW_DEPENDENCY_VERSIONS=str(filename),
             CIBW_BUILD_FRONTEND="build",
             CIBW_CONTAINER_ENGINE="podman",
             CIBW_ENVIRONMENT_PASS_LINUX="SOURCE_DATE_EPOCH",
-            CIBW_ENVIRONMENT=f"PIP_TIMEOUT=150 PIP_CONSTRAINT=/{filename}",
+            CIBW_ENVIRONMENT="PIP_TIMEOUT=150",
         ),
         TemporaryDirectory() as directory,
     ):
@@ -129,7 +117,6 @@ def _cibuildwheel(sdist: Path, output: Path) -> Path:
         args.output_dir = Path(directory).resolve()
         args.platform = None
         with chdir(directory):  # output maybe a relative path
-            filename.write_text("\n".join(CONSTRAINTS) + "\n")
             build_in_directory(args)
         wheel = next(args.output_dir.glob("*.whl"))
         output.joinpath(wheel.name).unlink(missing_ok=True)
@@ -255,16 +242,6 @@ def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
     else:
         group = 1
     return (group, breadth_first_key(item))
-
-
-def override(before: set[str], constraints: set[str] = CONSTRAINTS) -> set[str]:
-    """Replace certain requirements from constraints"""
-    after = set()
-    for replacement in constraints:
-        name = Requirement(replacement).name
-        for i in before:
-            after.add(replacement if Requirement(i).name == name else i)
-    return after
 
 
 def zipumask(path: Path, umask: int = 0o022) -> Path:
