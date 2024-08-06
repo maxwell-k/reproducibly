@@ -30,7 +30,6 @@ from reproducibly import (
     latest_modification_time,
     main,
     ModifiedEnvironment,
-    override,
     parse_args,
     zipumask,
 )
@@ -148,16 +147,6 @@ class TestLatestModificationTime(unittest.TestCase):
 
             result = latest_modification_time(archive)
             self.assertEqual(result, str(int(latest)))
-
-
-class TestOverride(unittest.TestCase):
-    def test_overridden_with_specific_version(self):
-        result = override({"example"}, {"example==1.2.3"})
-        self.assertEqual(result, {"example==1.2.3"})
-
-    def test_unchanged(self):
-        result = override({"example"}, {"other==1.2.3"})
-        self.assertEqual(result, {"example"})
 
 
 class TestZipumask(unittest.TestCase):
