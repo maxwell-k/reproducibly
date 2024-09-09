@@ -94,7 +94,7 @@ def _build(
 
 def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
     with tarfile.open(sdist) as t:
-        t.extractall(directory)
+        t.extractall(directory, filter="data")
     return next(Path(directory).iterdir())
 
 
@@ -180,7 +180,7 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
 
     with TemporaryDirectory() as directory:
         with tarfile.open(path) as tar:
-            tar.extractall(path=directory)
+            tar.extractall(path=directory, filter="data")
 
         path.unlink(missing_ok=True)
         (extracted,) = Path(directory).iterdir()
