@@ -77,4 +77,6 @@ To run unit tests and integration tests:
 README.md
 Copyright 2023 Keith Maxwell
 SPDX-License-Identifier: CC-BY-SA-4.0
+
+vim: set filetype=markdown.dprint.cog.htmlCommentNoSpell :
 -->
