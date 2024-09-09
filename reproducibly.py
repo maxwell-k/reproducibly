@@ -51,7 +51,7 @@ from pyproject_hooks import default_subprocess_runner
 # cog.outl("# ///")
 # ]]]
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.12"
 # dependencies = [
 #   "build==1.2.1",
 #   "cibuildwheel==2.20.0",
@@ -67,7 +67,7 @@ from pyproject_hooks import default_subprocess_runner
 # - Built distributions are typically zip files
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
-#   <https://github.com/python/cpython/blob/3.11/Lib/zipfile.py>.
+#   <https://github.com/python/cpython/blob/3.12/Lib/zipfile.py>.
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
@@ -94,7 +94,7 @@ def _build(
 
 def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
     with tarfile.open(sdist) as t:
-        t.extractall(directory)
+        t.extractall(directory, filter="data")
     return next(Path(directory).iterdir())
 
 
@@ -180,7 +180,7 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
 
     with TemporaryDirectory() as directory:
         with tarfile.open(path) as tar:
-            tar.extractall(path=directory)
+            tar.extractall(path=directory, filter="data")
 
         path.unlink(missing_ok=True)
         (extracted,) = Path(directory).iterdir()
