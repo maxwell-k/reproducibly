@@ -6,7 +6,7 @@ import tomllib
 from hashlib import file_digest
 from importlib.metadata import version
 from pathlib import Path
-from shutil import rmtree
+from shutil import rmtree, which
 from typing import Literal
 
 import nox
@@ -162,6 +162,10 @@ def pypi(session) -> None:
     # https://github.com/beancount/beancount/blob/master/pyproject.toml#L3
     # https://discuss.python.org/t/pip-download-just-the-source-packages-no-building-no-metadata-etc/4651
     session.install("meson", "meson-python", "ninja")
+    # building a wheel to retrieve metadata will fail if meson is not available
+    # on Fedora the pythonX.Y-devel package is also required
+    if which("meson") is None:
+        session.error("Meson system package required")
     session.run(
         "python",
         "-m",
