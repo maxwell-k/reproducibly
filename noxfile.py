@@ -161,7 +161,7 @@ def pypi(session) -> None:
     # References:
     # https://github.com/beancount/beancount/blob/master/pyproject.toml#L3
     # https://discuss.python.org/t/pip-download-just-the-source-packages-no-building-no-metadata-etc/4651
-    session.install("meson", "meson-python", "ninja")
+    session.install("meson", "meson-python", "ninja", "setuptools")
     # building a wheel to retrieve metadata will fail if meson is not available
     # on Fedora the pythonX.Y-devel package is also required
     if which("meson") is None:
