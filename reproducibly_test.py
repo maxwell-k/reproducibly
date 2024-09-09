@@ -5,7 +5,7 @@ import gzip
 import tarfile
 import unittest
 from contextlib import chdir
-from datetime import datetime
+from datetime import datetime, UTC
 from functools import partial
 from operator import attrgetter, getitem
 from os import utime
@@ -224,10 +224,7 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
-        self.assertEqual(
-            self.DATE,
-            datetime.utcfromtimestamp(mtime),
-        )
+        self.assertEqual(self.DATE, datetime.fromtimestamp(mtime, UTC))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 

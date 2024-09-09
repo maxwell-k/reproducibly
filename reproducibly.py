@@ -71,7 +71,7 @@ from pyproject_hooks import default_subprocess_runner
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 
 def _build(
@@ -94,7 +94,7 @@ def _build(
 
 def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
     with tarfile.open(sdist) as t:
-        t.extractall(directory)
+        t.extractall(directory, filter="data")
     return next(Path(directory).iterdir())
 
 
@@ -180,7 +180,7 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
 
     with TemporaryDirectory() as directory:
         with tarfile.open(path) as tar:
-            tar.extractall(path=directory)
+            tar.extractall(path=directory, filter="data")
 
         path.unlink(missing_ok=True)
         (extracted,) = Path(directory).iterdir()
