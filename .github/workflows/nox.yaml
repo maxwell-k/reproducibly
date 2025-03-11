@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with: { python-version: "3.13" }
         id: setup
       - run: pipx run "--python=${{ steps.setup.outputs.python-path }}" nox
       - run: git diff --exit-code dist/SHA256SUMS
