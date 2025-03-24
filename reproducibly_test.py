@@ -25,12 +25,12 @@ from reproducibly import (
     breadth_first_key,
     Builder,
     cleanse_metadata,
+    fix_zip_members,
     key,
     latest_modification_time,
     main,
     ModifiedEnvironment,
     parse_args,
-    zipumask,
 )
 
 
@@ -150,7 +150,7 @@ class TestLatestModificationTime(unittest.TestCase):
             self.assertEqual(result, str(int(latest)))
 
 
-class TestZipumask(unittest.TestCase):
+class TestFixZipMembers(unittest.TestCase):
     def test_basic(self):
         with TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
@@ -162,7 +162,7 @@ class TestZipumask(unittest.TestCase):
             with ZipFile(archive, mode="w") as zip_:
                 zip_.write(one, one.name)
 
-            zipumask(archive)
+            fix_zip_members(archive)
 
             with ZipFile(archive) as zip_:
                 mode = zip_.getinfo(one.name).external_attr >> 16

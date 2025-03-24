@@ -244,11 +244,14 @@ def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
     return (group, breadth_first_key(item))
 
 
-def zipumask(path: Path, umask: int = 0o022) -> Path:
-    """Apply a umask to a zip file at path
+def fix_zip_members(path: Path, umask: int = 0o022) -> Path:
+    """Apply fixes to members in a zip file
 
-    Path is both the source and destination, a temporary working copy is
-    made."""
+    Processes the zip file in place. Path is both the source and destination, a
+    temporary working copy is made.
+
+    - Apply a umask to each member
+    """
     operand = ~(umask << 16)
 
     with TemporaryDirectory() as directory:
@@ -363,7 +366,7 @@ def main(arguments: list[str] | None = None) -> int:
                 with TemporaryDirectory() as directory:
                     srcdir = _extract_to_empty_directory(sdist, directory)
                     built = _build(srcdir, parsed["output"], "wheel")
-        _sortwheel(zipumask(built))
+        _sortwheel(fix_zip_members(built))
     return 0
 
 
