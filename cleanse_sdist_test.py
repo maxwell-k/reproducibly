@@ -1,11 +1,11 @@
-# cleanse_metadata_test.py
+# cleanse_sdist_test.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import tarfile
 import unittest
 from unittest.mock import patch
 
-from cleanse_metadata import main, parse_args
+from cleanse_sdist import main, parse_args
 from reproducibly_test import SimpleFixtureMixin
 
 

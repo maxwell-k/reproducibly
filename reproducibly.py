@@ -165,8 +165,8 @@ class Builder(Enum):
         return Builder.cibuildwheel if c else Builder.build
 
 
-def cleanse_metadata(path_: Path, mtime: float) -> int:
-    """Cleanse metadata from a single source distribution
+def cleanse_sdist(path_: Path, mtime: float) -> int:
+    """Cleanse a single source distribution
 
     - Set all uids and gids to zero
     - Set all unames and gnames to root
@@ -174,6 +174,7 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
     - Set modified time for .tar inside .gz
     - Set modified time for files inside the .tar
     - Remove group and other write permissions for files inside the .tar
+    - Set the compression level to zero i.e. no compression
     """
     path = path_.absolute()
 
@@ -372,7 +373,7 @@ def main(arguments: list[str] | None = None) -> int:
             date = float(environ["SOURCE_DATE_EPOCH"])
         else:
             date = latest_commit_time(repository)
-        cleanse_metadata(sdist, date)
+        cleanse_sdist(sdist, date)
     for sdist in parsed["sdists"]:
         with ModifiedEnvironment(SOURCE_DATE_EPOCH=latest_modification_time(sdist)):
             if Builder.which(sdist) == Builder.cibuildwheel:

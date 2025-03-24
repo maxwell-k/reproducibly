@@ -24,7 +24,7 @@ from pyproject_hooks import quiet_subprocess_runner
 from reproducibly import (
     breadth_first_key,
     Builder,
-    cleanse_metadata,
+    cleanse_sdist,
     fix_zip_members,
     key,
     latest_modification_time,
@@ -236,7 +236,7 @@ class TestMain(unittest.TestCase):
         mtime = datetime(2001, 1, 1).timestamp()
         with (
             patch("reproducibly._build"),
-            patch("reproducibly.cleanse_metadata") as mock,
+            patch("reproducibly.cleanse_sdist") as mock,
             TemporaryDirectory() as output,
             ModifiedEnvironment(SOURCE_DATE_EPOCH=str(mtime)),
         ):
@@ -375,7 +375,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("uid") == {0}:
             raise RuntimeError("uids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uid"), {0})
@@ -384,7 +384,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("gid") == {0}:
             raise RuntimeError("gids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gid"), {0})
@@ -393,7 +393,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("uname") == {"root"}:
             raise RuntimeError('unames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uname"), {"root"})
@@ -402,7 +402,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("gname") == {"root"}:
             raise RuntimeError('gnames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gname"), {"root"})
@@ -417,7 +417,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if stat("st_atime") == expected:
             raise RuntimeError("atime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(stat("st_mtime"), expected)
@@ -433,7 +433,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if gzip_mtime() == expected:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(gzip_mtime(), expected)
@@ -443,13 +443,13 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("mtime") == {expected}:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("mtime"), {expected})
 
     def test_no_compression(self):
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         compressed = self.sdist.stat().st_size
         with gzip.open(self.sdist) as f:
