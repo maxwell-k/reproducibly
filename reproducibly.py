@@ -200,7 +200,9 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
         with tarfile.open(uncompressed, "w") as tar:
             tar.add(extracted, filter=filter_)
 
-        with gzip.GzipFile(filename=path, mode="wb", mtime=mtime) as file:
+        with gzip.GzipFile(
+            filename=path, mode="wb", mtime=mtime, compresslevel=0
+        ) as file:
             with open(uncompressed, "rb") as tar:
                 copyfileobj(tar, file)
         utime(path, (mtime, mtime))

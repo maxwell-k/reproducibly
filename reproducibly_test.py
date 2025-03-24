@@ -448,6 +448,15 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("mtime"), {expected})
 
+    def test_no_compression(self):
+        returncode = cleanse_metadata(self.sdist, self.date)
+
+        compressed = self.sdist.stat().st_size
+        with gzip.open(self.sdist) as f:
+            uncompressed = len(f.read())
+        self.assertEqual(returncode, 0)
+        self.assertGreaterEqual(compressed, uncompressed)
+
 
 if __name__ == "__main__":
     unittest.main()
