@@ -5,9 +5,8 @@ import gzip
 import tarfile
 import unittest
 from contextlib import chdir
-from datetime import datetime, UTC
-from functools import partial
-from operator import attrgetter, getitem
+from datetime import datetime
+from operator import attrgetter
 from os import utime
 from pathlib import Path
 from shutil import rmtree
@@ -93,22 +92,24 @@ class TestBreadthFirstKey(unittest.TestCase):
 
 
 class TestKey(unittest.TestCase):
-    _STRINGS = (
-        "a/__init__.py",
-        "a/z.py",
-        "a/x/x.py",
-        "a/x/y/x.py",
-        "a/y/x.py",
-        "a-2023.01.13.dist-info/METADATA",
-        "a-2023.01.13.dist-info/WHEEL",
-        "a-2023.01.13.dist-info/top_level.txt",
-        "a-2023.01.13.dist-info/RECORD",
-    )
-    _UNSORTED = (2, 3, 0, 1, 4, 7, 6, 5, 8)
-    LINES = [i.encode() + b",sha256=X,1234\n" for i in _STRINGS]
-    ZIPINFOS = [ZipInfo(i) for i in _STRINGS]
-    UNSORTED_LINES = list(map(partial(getitem, LINES), _UNSORTED))
-    UNSORTED_ZIPINFOS = list(map(partial(getitem, ZIPINFOS), _UNSORTED))
+    @classmethod
+    def setUpClass(cls):
+        cls._STRINGS = (
+            "a/__init__.py",
+            "a/z.py",
+            "a/x/x.py",
+            "a/x/y/x.py",
+            "a/y/x.py",
+            "a-2023.01.13.dist-info/METADATA",
+            "a-2023.01.13.dist-info/WHEEL",
+            "a-2023.01.13.dist-info/top_level.txt",
+            "a-2023.01.13.dist-info/RECORD",
+        )
+        cls.LINES = [i.encode() + b",sha256=X,1234\n" for i in cls._STRINGS]
+        cls.ZIPINFOS = [ZipInfo(i) for i in cls._STRINGS]
+        _UNSORTED = [2, 3, 0, 1, 4, 7, 6, 5, 8]
+        cls.UNSORTED_LINES = [cls.LINES[i] for i in _UNSORTED]
+        cls.UNSORTED_ZIPINFOS = [cls.ZIPINFOS[i] for i in _UNSORTED]
 
     def test_is_idempotent(self):
         result = sorted(self.LINES, key=key)
