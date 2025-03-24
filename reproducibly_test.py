@@ -224,7 +224,7 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
-        self.assertEqual(self.DATE, datetime.fromtimestamp(mtime, UTC))
+        self.assertEqual(self.DATE, datetime.fromtimestamp(mtime))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 
