@@ -38,6 +38,7 @@ features:
 - Builds a source distribution (sdist) from a git repository
 - Builds a wheel from a sdist
 - Resets metadata like user and group names and ids to predictable values
+- Uses no compression for predictable file hashes across Linux distributions
 - By default uses the last commit date and time from git
 - Respects SOURCE_DATE_EPOCH when building a sdist
 - Single file script with inline script metadata or PyPI package

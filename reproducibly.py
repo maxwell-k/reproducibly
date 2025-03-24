@@ -5,6 +5,7 @@ features:
 - Builds a source distribution (sdist) from a git repository
 - Builds a wheel from a sdist
 - Resets metadata like user and group names and ids to predictable values
+- Uses no compression for predictable file hashes across Linux distributions
 - By default uses the last commit date and time from git
 - Respects SOURCE_DATE_EPOCH when building a sdist
 - Single file script with inline script metadata or PyPI package
@@ -27,7 +28,7 @@ from subprocess import CalledProcessError, run
 from sys import version_info
 from tempfile import TemporaryDirectory
 from typing import cast, Literal, TypedDict
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
@@ -251,6 +252,16 @@ def fix_zip_members(path: Path, umask: int = 0o022) -> Path:
     temporary working copy is made.
 
     - Apply a umask to each member
+    - Change to compression level zero
+
+    When using the default deflate compression and comparing wheels created on
+    Ubuntu 24.04 and Fedora 40, minor differences in the size of the compressed
+    wheel were observed. For example:
+
+    │ -112 files, 909030 bytes uncompressed, 272160 bytes compressed:  70.1%
+    │ +112 files, 909030 bytes uncompressed, 271653 bytes compressed:  70.1%
+
+    As a solution this function uses compression level zero i.e. no compression.
     """
     operand = ~(umask << 16)
 
@@ -260,6 +271,8 @@ def fix_zip_members(path: Path, umask: int = 0o022) -> Path:
             for member in original.infolist():
                 data = original.read(member)
                 member.external_attr = member.external_attr & operand
+                member.compress_type = ZIP_DEFLATED
+                member.compress_level = 0
                 destination.writestr(member, data)
         path.unlink()
         move(copy, path)  # can't rename as /tmp may be a different device
@@ -366,7 +379,7 @@ def main(arguments: list[str] | None = None) -> int:
                 with TemporaryDirectory() as directory:
                     srcdir = _extract_to_empty_directory(sdist, directory)
                     built = _build(srcdir, parsed["output"], "wheel")
-        _sortwheel(fix_zip_members(built))
+        fix_zip_members(_sortwheel(built))
     return 0
 
 

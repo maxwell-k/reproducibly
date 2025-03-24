@@ -15,7 +15,7 @@ from subprocess import run
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import ANY, patch
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
@@ -155,19 +155,22 @@ class TestFixZipMembers(unittest.TestCase):
         with TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
             one = path / "1.txt"
-            one.write_text("One")
+            one.write_text("One\n" * 100)
             one.chmod(0o777)  # -rwxrwxrwx
 
             archive = path / "archive.zip"
-            with ZipFile(archive, mode="w") as zip_:
+            with ZipFile(archive, mode="w", compression=ZIP_DEFLATED) as zip_:
                 zip_.write(one, one.name)
 
             fix_zip_members(archive)
 
             with ZipFile(archive) as zip_:
-                mode = zip_.getinfo(one.name).external_attr >> 16
+                info = zip_.getinfo(one.name)
 
-        self.assertEqual(filemode(mode), "-rwxr-xr-x")
+        self.assertEqual(filemode(info.external_attr >> 16), "-rwxr-xr-x")
+        self.assertEqual(info.compress_type, ZIP_DEFLATED)
+        # indirectly check for compress_level=0
+        self.assertGreaterEqual(info.compress_size, info.file_size)
 
 
 class TestMain(unittest.TestCase):
