@@ -25,7 +25,7 @@ DEVELOPMENT = [
     "reuse",
     "usort",
 ]
-PRIMARY = "3.12"
+PRIMARY = "3.13"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
 OUTPUT = Path("dist")

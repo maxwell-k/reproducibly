@@ -51,7 +51,7 @@ from pyproject_hooks import default_subprocess_runner
 # cog.outl("# ///")
 # ]]]
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.13"
 # dependencies = [
 #   "build==1.2.1",
 #   "cibuildwheel==2.20.0",
@@ -67,7 +67,7 @@ from pyproject_hooks import default_subprocess_runner
 # - Built distributions are typically zip files
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
-#   <https://github.com/python/cpython/blob/3.12/Lib/zipfile.py>.
+#   <https://github.com/python/cpython/blob/3.13/Lib/zipfile.py>.
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
