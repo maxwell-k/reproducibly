@@ -22,9 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs: { version: "${{ steps.version.outputs.version }}" }
     steps:
+      - run: sudo apt-get update && sudo apt-get --yes install meson
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with: { python-version: "3.13" }
         id: setup
       - run: pipx run "--python=${{ steps.setup.outputs.python-path }}" nox
       - run: git diff --exit-code dist/SHA256SUMS
@@ -35,6 +36,7 @@ jobs:
       - name: Upload dist/
         uses: actions/upload-artifact@v4
         with: { name: dist, path: dist }
+        if: always()
       - name: Upload wheelhouse/ to debug unexpected changes
         uses: actions/upload-artifact@v4
         with: { name: wheelhouse, path: wheelhouse }

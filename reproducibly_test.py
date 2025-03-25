@@ -6,8 +6,7 @@ import tarfile
 import unittest
 from contextlib import chdir
 from datetime import datetime
-from functools import partial
-from operator import attrgetter, getitem
+from operator import attrgetter
 from os import utime
 from pathlib import Path
 from shutil import rmtree
@@ -16,7 +15,7 @@ from subprocess import run
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from time import mktime
 from unittest.mock import ANY, patch
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
@@ -25,13 +24,13 @@ from pyproject_hooks import quiet_subprocess_runner
 from reproducibly import (
     breadth_first_key,
     Builder,
-    cleanse_metadata,
+    cleanse_sdist,
+    fix_zip_members,
     key,
     latest_modification_time,
     main,
     ModifiedEnvironment,
     parse_args,
-    zipumask,
 )
 
 
@@ -93,22 +92,24 @@ class TestBreadthFirstKey(unittest.TestCase):
 
 
 class TestKey(unittest.TestCase):
-    _STRINGS = (
-        "a/__init__.py",
-        "a/z.py",
-        "a/x/x.py",
-        "a/x/y/x.py",
-        "a/y/x.py",
-        "a-2023.01.13.dist-info/METADATA",
-        "a-2023.01.13.dist-info/WHEEL",
-        "a-2023.01.13.dist-info/top_level.txt",
-        "a-2023.01.13.dist-info/RECORD",
-    )
-    _UNSORTED = (2, 3, 0, 1, 4, 7, 6, 5, 8)
-    LINES = [i.encode() + b",sha256=X,1234\n" for i in _STRINGS]
-    ZIPINFOS = [ZipInfo(i) for i in _STRINGS]
-    UNSORTED_LINES = list(map(partial(getitem, LINES), _UNSORTED))
-    UNSORTED_ZIPINFOS = list(map(partial(getitem, ZIPINFOS), _UNSORTED))
+    @classmethod
+    def setUpClass(cls):
+        cls._STRINGS = (
+            "a/__init__.py",
+            "a/z.py",
+            "a/x/x.py",
+            "a/x/y/x.py",
+            "a/y/x.py",
+            "a-2023.01.13.dist-info/METADATA",
+            "a-2023.01.13.dist-info/WHEEL",
+            "a-2023.01.13.dist-info/top_level.txt",
+            "a-2023.01.13.dist-info/RECORD",
+        )
+        cls.LINES = [i.encode() + b",sha256=X,1234\n" for i in cls._STRINGS]
+        cls.ZIPINFOS = [ZipInfo(i) for i in cls._STRINGS]
+        _UNSORTED = [2, 3, 0, 1, 4, 7, 6, 5, 8]
+        cls.UNSORTED_LINES = [cls.LINES[i] for i in _UNSORTED]
+        cls.UNSORTED_ZIPINFOS = [cls.ZIPINFOS[i] for i in _UNSORTED]
 
     def test_is_idempotent(self):
         result = sorted(self.LINES, key=key)
@@ -149,24 +150,27 @@ class TestLatestModificationTime(unittest.TestCase):
             self.assertEqual(result, str(int(latest)))
 
 
-class TestZipumask(unittest.TestCase):
+class TestFixZipMembers(unittest.TestCase):
     def test_basic(self):
         with TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
             one = path / "1.txt"
-            one.write_text("One")
+            one.write_text("One\n" * 100)
             one.chmod(0o777)  # -rwxrwxrwx
 
             archive = path / "archive.zip"
-            with ZipFile(archive, mode="w") as zip_:
+            with ZipFile(archive, mode="w", compression=ZIP_DEFLATED) as zip_:
                 zip_.write(one, one.name)
 
-            zipumask(archive)
+            fix_zip_members(archive)
 
             with ZipFile(archive) as zip_:
-                mode = zip_.getinfo(one.name).external_attr >> 16
+                info = zip_.getinfo(one.name)
 
-        self.assertEqual(filemode(mode), "-rwxr-xr-x")
+        self.assertEqual(filemode(info.external_attr >> 16), "-rwxr-xr-x")
+        self.assertEqual(info.compress_type, ZIP_DEFLATED)
+        # indirectly check for compress_level=0
+        self.assertGreaterEqual(info.compress_size, info.file_size)
 
 
 class TestMain(unittest.TestCase):
@@ -224,10 +228,7 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
-        self.assertEqual(
-            self.DATE,
-            datetime.utcfromtimestamp(mtime),
-        )
+        self.assertEqual(self.DATE, datetime.fromtimestamp(mtime))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 
@@ -235,7 +236,7 @@ class TestMain(unittest.TestCase):
         mtime = datetime(2001, 1, 1).timestamp()
         with (
             patch("reproducibly._build"),
-            patch("reproducibly.cleanse_metadata") as mock,
+            patch("reproducibly.cleanse_sdist") as mock,
             TemporaryDirectory() as output,
             ModifiedEnvironment(SOURCE_DATE_EPOCH=str(mtime)),
         ):
@@ -374,7 +375,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("uid") == {0}:
             raise RuntimeError("uids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uid"), {0})
@@ -383,7 +384,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("gid") == {0}:
             raise RuntimeError("gids are already {0} before starting")
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gid"), {0})
@@ -392,7 +393,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("uname") == {"root"}:
             raise RuntimeError('unames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("uname"), {"root"})
@@ -401,7 +402,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("gname") == {"root"}:
             raise RuntimeError('gnames are already {"root"} before starting')
 
-        returncode = cleanse_metadata(self.sdist, self.date)
+        returncode = cleanse_sdist(self.sdist, self.date)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("gname"), {"root"})
@@ -416,7 +417,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if stat("st_atime") == expected:
             raise RuntimeError("atime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(stat("st_mtime"), expected)
@@ -432,7 +433,7 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if gzip_mtime() == expected:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(gzip_mtime(), expected)
@@ -442,10 +443,19 @@ class TestCleanseMetadata(SimpleFixtureMixin, unittest.TestCase):
         if self.values("mtime") == {expected}:
             raise RuntimeError("mtime is already set")
 
-        returncode = cleanse_metadata(self.sdist, expected)
+        returncode = cleanse_sdist(self.sdist, expected)
 
         self.assertEqual(returncode, 0)
         self.assertEqual(self.values("mtime"), {expected})
+
+    def test_no_compression(self):
+        returncode = cleanse_sdist(self.sdist, self.date)
+
+        compressed = self.sdist.stat().st_size
+        with gzip.open(self.sdist) as f:
+            uncompressed = len(f.read())
+        self.assertEqual(returncode, 0)
+        self.assertGreaterEqual(compressed, uncompressed)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ features:
 - Builds a source distribution (sdist) from a git repository
 - Builds a wheel from a sdist
 - Resets metadata like user and group names and ids to predictable values
+- Uses no compression for predictable file hashes across Linux distributions
 - By default uses the last commit date and time from git
 - Respects SOURCE_DATE_EPOCH when building a sdist
 - Single file script with inline script metadata or PyPI package
@@ -14,7 +15,6 @@ features:
 # Copyright 2024 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import gzip
-import tarfile
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from contextlib import chdir
 from datetime import datetime
@@ -25,9 +25,10 @@ from shutil import copyfileobj, move
 from stat import S_IWGRP, S_IWOTH
 from subprocess import CalledProcessError, run
 from sys import version_info
+from tarfile import TarFile, TarInfo
 from tempfile import TemporaryDirectory
 from typing import cast, Literal, TypedDict
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
@@ -51,7 +52,7 @@ from pyproject_hooks import default_subprocess_runner
 # cog.outl("# ///")
 # ]]]
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.13"
 # dependencies = [
 #   "build==1.2.1",
 #   "cibuildwheel==2.20.0",
@@ -67,11 +68,11 @@ from pyproject_hooks import default_subprocess_runner
 # - Built distributions are typically zip files
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
-#   <https://github.com/python/cpython/blob/3.11/Lib/zipfile.py>.
+#   <https://github.com/python/cpython/blob/3.13/Lib/zipfile.py>.
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
 
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 
 def _build(
@@ -93,8 +94,8 @@ def _build(
 
 
 def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
-    with tarfile.open(sdist) as t:
-        t.extractall(directory)
+    with TarFile.open(sdist) as t:
+        t.extractall(directory, filter="data")
     return next(Path(directory).iterdir())
 
 
@@ -159,13 +160,13 @@ class Builder(Enum):
     @nonmember
     @staticmethod
     def which(archive: Path) -> "Builder":
-        with tarfile.open(archive, "r:gz") as tar:
+        with TarFile.open(archive, "r:gz") as tar:
             c = any(i.name.endswith(".c") for i in tar.getmembers())
         return Builder.cibuildwheel if c else Builder.build
 
 
-def cleanse_metadata(path_: Path, mtime: float) -> int:
-    """Cleanse metadata from a single source distribution
+def cleanse_sdist(path_: Path, mtime: float) -> int:
+    """Cleanse a single source distribution
 
     - Set all uids and gids to zero
     - Set all unames and gnames to root
@@ -173,22 +174,22 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
     - Set modified time for .tar inside .gz
     - Set modified time for files inside the .tar
     - Remove group and other write permissions for files inside the .tar
+    - Set the compression level to zero i.e. no compression
     """
-    path = path_.absolute()
+    filename = path_.absolute()
 
     mtime = max(mtime, EARLIEST)
 
-    with TemporaryDirectory() as directory:
-        with tarfile.open(path) as tar:
-            tar.extractall(path=directory)
+    with TemporaryDirectory() as path:
+        with TarFile.open(filename) as tar:
+            tar.extractall(path=path, filter="data")
 
-        path.unlink(missing_ok=True)
-        (extracted,) = Path(directory).iterdir()
-        uncompressed = f"{extracted}.tar"
+        filename.unlink(missing_ok=True)
+        (extracted,) = Path(path).iterdir()
 
-        prefix = directory.removeprefix("/") + "/"
+        prefix = path.removeprefix("/") + "/"
 
-        def filter_(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo:
+        def filter_(tarinfo: TarInfo) -> TarInfo:
             tarinfo.mtime = int(mtime)
             tarinfo.uid = tarinfo.gid = 0
             tarinfo.uname = tarinfo.gname = "root"
@@ -196,19 +197,25 @@ def cleanse_metadata(path_: Path, mtime: float) -> int:
             tarinfo.path = tarinfo.path.removeprefix(prefix)
             return tarinfo
 
-        with tarfile.open(uncompressed, "w") as tar:
-            tar.add(extracted, filter=filter_)
+        tar = f"{extracted}.tar"
+        with TarFile.open(tar, "w") as tarfile:
+            tarfile.add(extracted, filter=filter_)
 
-        with gzip.GzipFile(filename=path, mode="wb", mtime=mtime) as file:
-            with open(uncompressed, "rb") as tar:
+        with gzip.GzipFile(
+            filename=filename,
+            mode="wb",
+            mtime=mtime,
+            compresslevel=0,
+        ) as file:
+            with open(tar, "rb") as tar:
                 copyfileobj(tar, file)
-        utime(path, (mtime, mtime))
+        utime(filename, (mtime, mtime))
     return 0
 
 
 def latest_modification_time(archive: Path) -> str:
     """Latest modification time for a gzipped tarfile as a string"""
-    with tarfile.open(archive, "r:gz") as tar:
+    with TarFile.open(archive, "r:gz") as tar:
         latest = max(member.mtime for member in tar.getmembers())
     return "{:.0f}".format(latest)
 
@@ -244,11 +251,24 @@ def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
     return (group, breadth_first_key(item))
 
 
-def zipumask(path: Path, umask: int = 0o022) -> Path:
-    """Apply a umask to a zip file at path
+def fix_zip_members(path: Path, umask: int = 0o022) -> Path:
+    """Apply fixes to members in a zip file
 
-    Path is both the source and destination, a temporary working copy is
-    made."""
+    Processes the zip file in place. Path is both the source and destination, a
+    temporary working copy is made.
+
+    - Apply a umask to each member
+    - Change to compression level zero
+
+    When using the default deflate compression and comparing wheels created on
+    Ubuntu 24.04 and Fedora 40, minor differences in the size of the compressed
+    wheel were observed. For example:
+
+    │ -112 files, 909030 bytes uncompressed, 272160 bytes compressed:  70.1%
+    │ +112 files, 909030 bytes uncompressed, 271653 bytes compressed:  70.1%
+
+    As a solution this function uses compression level zero i.e. no compression.
+    """
     operand = ~(umask << 16)
 
     with TemporaryDirectory() as directory:
@@ -257,6 +277,8 @@ def zipumask(path: Path, umask: int = 0o022) -> Path:
             for member in original.infolist():
                 data = original.read(member)
                 member.external_attr = member.external_attr & operand
+                member.compress_type = ZIP_DEFLATED
+                member.compress_level = 0
                 destination.writestr(member, data)
         path.unlink()
         move(copy, path)  # can't rename as /tmp may be a different device
@@ -354,7 +376,7 @@ def main(arguments: list[str] | None = None) -> int:
             date = float(environ["SOURCE_DATE_EPOCH"])
         else:
             date = latest_commit_time(repository)
-        cleanse_metadata(sdist, date)
+        cleanse_sdist(sdist, date)
     for sdist in parsed["sdists"]:
         with ModifiedEnvironment(SOURCE_DATE_EPOCH=latest_modification_time(sdist)):
             if Builder.which(sdist) == Builder.cibuildwheel:
@@ -363,7 +385,7 @@ def main(arguments: list[str] | None = None) -> int:
                 with TemporaryDirectory() as directory:
                     srcdir = _extract_to_empty_directory(sdist, directory)
                     built = _build(srcdir, parsed["output"], "wheel")
-        _sortwheel(zipumask(built))
+        fix_zip_members(_sortwheel(built))
     return 0
 
 

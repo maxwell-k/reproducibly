@@ -13,7 +13,7 @@ authors = [
   { name = "Keith Maxwell", email = "keith.maxwell@gmail.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",

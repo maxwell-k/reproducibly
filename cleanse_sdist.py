@@ -1,16 +1,16 @@
-"""Cleanse metadata from source distributions
+"""Cleanse a source distributions
 
 Originally based on
 https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/setuptools/default.nix#L36
 """
 
-# cleanse_metadata.py
+# cleanse_sdist.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 from argparse import ArgumentParser
 from pathlib import Path
 
-from reproducibly import cleanse_metadata, EARLIEST
+from reproducibly import cleanse_sdist, EARLIEST
 
 
 def parse_args(args: list[str] | None):
@@ -30,12 +30,12 @@ def parse_args(args: list[str] | None):
 
 
 def main(arguments: list[str] | None = None) -> int:
-    """Call cleanse_metadata once for each input"""
+    """Call cleanse_sdist once for each input"""
     parsed = parse_args(arguments)
     returncode = 0
     # try all source distributions before exiting with an error
     for distribution in parsed.source_distribution:
-        returncode = min(cleanse_metadata(distribution, EARLIEST), 1)
+        returncode = min(cleanse_sdist(distribution, EARLIEST), 1)
 
     return returncode
 

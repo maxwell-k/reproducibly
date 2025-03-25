@@ -6,7 +6,7 @@ import tomllib
 from hashlib import file_digest
 from importlib.metadata import version
 from pathlib import Path
-from shutil import rmtree
+from shutil import rmtree, which
 from typing import Literal
 
 import nox
@@ -25,7 +25,7 @@ DEVELOPMENT = [
     "reuse",
     "usort",
 ]
-PRIMARY = "3.11"
+PRIMARY = "3.13"
 VIRTUAL_ENVIRONMENT = ".venv"
 CWD = Path(".").absolute()
 OUTPUT = Path("dist")
@@ -46,8 +46,8 @@ SDIST_DIGESTS = [
     "cf6686869c7ea3eefc094ee13ed866bf5f7a2bb0c61e4d4f5df3e35f846cffdf",
 ]
 WHEEL_DIGESTS = [
-    "229e4252651f742539f3783e9d11ccaa99967939fd6eba4b96feee7d699bc919",
-    "68351534619100374020cc86276f872fb9e48a038949dfa68fefa31105ecc53f",
+    "d137bb2534778bab15916ca519cc30bb76f7d66000617d83970e9566cc0a865c",
+    "1e7241b1e30d3e8b845cfaaa5169353b275b35ba7a9e776da52721180da35ca8",
 ]
 
 nox.options.sessions = [
@@ -161,7 +161,11 @@ def pypi(session) -> None:
     # References:
     # https://github.com/beancount/beancount/blob/master/pyproject.toml#L3
     # https://discuss.python.org/t/pip-download-just-the-source-packages-no-building-no-metadata-etc/4651
-    session.install("meson", "meson-python", "ninja")
+    session.install("meson", "meson-python", "ninja", "setuptools")
+    # building a wheel to retrieve metadata will fail if meson is not available
+    # on Fedora the pythonX.Y-devel package is also required
+    if which("meson") is None:
+        session.error("Meson system package required")
     session.run(
         "python",
         "-m",
