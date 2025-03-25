@@ -37,6 +37,27 @@ SCRIPT = Path("reproducibly.py")
 # https://peps.python.org/pep-0723/#reference-implementation
 REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
+# Since version 3.1.0, and specifically the pull request and commit linked
+# below, beancount does not include the # generated lexer.c and grammar.c files
+# in the source distribution. The beancount build process requires recent
+# versions of bison and flex that are not available in the manylinux images.
+#
+# https://github.com/beancount/beancount/pull/860
+# https://github.com/beancount/beancount/commit/a7d3053e9425dd745f16f33ccdfbcf16ed5a4c9c
+#
+# See also:
+# https://github.com/beancount/beancount#download--installation
+# https://github.com/beancount/beancount/blob/master/Makefile#L19
+# https://github.com/beancount/beancount/blob/master/.github/workflows/wheels.yaml#L50
+CIBW_BEFORE_ALL = """\
+curl --fail --remote-name https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz \
+&& tar xf bison-3.8.2.tar.xz \
+&& ( cd bison-3.8.2 && ./configure && make && make install ) \
+&& curl --fail --remote-name --location \
+https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
+&& tar xzf flex-2.6.4.tar.gz \
+&& ( cd flex-2.6.4 && ./configure && make && make install )\
+"""
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
     "beancount==3.0.0",
@@ -181,7 +202,13 @@ def pypi(session) -> None:
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
     session.install(*_read_dependency_block())
-    session.run("python", SCRIPT, *SDISTS.iterdir(), WHEELS)
+    session.run(
+        "python",
+        SCRIPT,
+        *SDISTS.iterdir(),
+        WHEELS,
+        env=dict(CIBW_BEFORE_ALL=CIBW_BEFORE_ALL),
+    )
 
     # List each file for a specifier
     sdists, wheels = [], []
