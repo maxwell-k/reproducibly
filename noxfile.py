@@ -37,17 +37,38 @@ SCRIPT = Path("reproducibly.py")
 # https://peps.python.org/pep-0723/#reference-implementation
 REGEX = r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 
+# Since version 3.1.0, and specifically the pull request and commit linked
+# below, beancount does not include the # generated lexer.c and grammar.c files
+# in the source distribution. The beancount build process requires recent
+# versions of bison and flex that are not available in the manylinux images.
+#
+# https://github.com/beancount/beancount/pull/860
+# https://github.com/beancount/beancount/commit/a7d3053e9425dd745f16f33ccdfbcf16ed5a4c9c
+#
+# See also:
+# https://github.com/beancount/beancount#download--installation
+# https://github.com/beancount/beancount/blob/master/Makefile#L19
+# https://github.com/beancount/beancount/blob/master/.github/workflows/wheels.yaml#L50
+CIBW_BEFORE_ALL = """\
+curl --fail --remote-name https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz \
+&& tar xf bison-3.8.2.tar.xz \
+&& ( cd bison-3.8.2 && ./configure && make && make install ) \
+&& curl --fail --remote-name --location \
+https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
+&& tar xzf flex-2.6.4.tar.gz \
+&& ( cd flex-2.6.4 && ./configure && make && make install )\
+"""
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
-    "beancount==3.0.0",
+    "beancount==3.1.0",
 ]
 SDIST_DIGESTS = [
     "cf715f929957bde07a8069d8bdf01c4639f26838e76359b74565de7413182220",
-    "cf6686869c7ea3eefc094ee13ed866bf5f7a2bb0c61e4d4f5df3e35f846cffdf",
+    "1e70aba21fae648bc069452999d62c94c91edd7567f41697395c951be791ee0b",
 ]
 WHEEL_DIGESTS = [
     "fec437f3b7435cbc6db317bb8ea37ecc9a1b598e4c96a1d2837b0f5091877815",
-    "714dcea4d0632517d4cfe0d4c7136ee4d935d2cce2fcddb7b4a5385a53b72714",
+    "c97c9ae65ff9631cb0c2e4604bc0d6c13d11e15fa6129ae80f3d92637d19cb18",
 ]
 
 nox.options.sessions = [
@@ -181,7 +202,13 @@ def pypi(session) -> None:
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
     session.install(*_read_dependency_block())
-    session.run("python", SCRIPT, *SDISTS.iterdir(), WHEELS)
+    session.run(
+        "python",
+        SCRIPT,
+        *SDISTS.iterdir(),
+        WHEELS,
+        env=dict(CIBW_BEFORE_ALL=CIBW_BEFORE_ALL),
+    )
 
     # List each file for a specifier
     sdists, wheels = [], []
