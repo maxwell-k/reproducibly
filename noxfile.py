@@ -60,15 +60,15 @@ https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
 """
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
-    "beancount==3.0.0",
+    "beancount==3.1.0",
 ]
 SDIST_DIGESTS = [
     "cf715f929957bde07a8069d8bdf01c4639f26838e76359b74565de7413182220",
-    "cf6686869c7ea3eefc094ee13ed866bf5f7a2bb0c61e4d4f5df3e35f846cffdf",
+    "1e70aba21fae648bc069452999d62c94c91edd7567f41697395c951be791ee0b",
 ]
 WHEEL_DIGESTS = [
     "fec437f3b7435cbc6db317bb8ea37ecc9a1b598e4c96a1d2837b0f5091877815",
-    "714dcea4d0632517d4cfe0d4c7136ee4d935d2cce2fcddb7b4a5385a53b72714",
+    "c97c9ae65ff9631cb0c2e4604bc0d6c13d11e15fa6129ae80f3d92637d19cb18",
 ]
 
 nox.options.sessions = [
