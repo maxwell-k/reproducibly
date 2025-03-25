@@ -15,7 +15,6 @@ features:
 # Copyright 2024 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
 import gzip
-import tarfile
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from contextlib import chdir
 from datetime import datetime
@@ -26,6 +25,7 @@ from shutil import copyfileobj, move
 from stat import S_IWGRP, S_IWOTH
 from subprocess import CalledProcessError, run
 from sys import version_info
+from tarfile import TarFile, TarInfo
 from tempfile import TemporaryDirectory
 from typing import cast, Literal, TypedDict
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -94,7 +94,7 @@ def _build(
 
 
 def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
-    with tarfile.open(sdist) as t:
+    with TarFile.open(sdist) as t:
         t.extractall(directory, filter="data")
     return next(Path(directory).iterdir())
 
@@ -160,7 +160,7 @@ class Builder(Enum):
     @nonmember
     @staticmethod
     def which(archive: Path) -> "Builder":
-        with tarfile.open(archive, "r:gz") as tar:
+        with TarFile.open(archive, "r:gz") as tar:
             c = any(i.name.endswith(".c") for i in tar.getmembers())
         return Builder.cibuildwheel if c else Builder.build
 
@@ -176,21 +176,20 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
     - Remove group and other write permissions for files inside the .tar
     - Set the compression level to zero i.e. no compression
     """
-    path = path_.absolute()
+    filename = path_.absolute()
 
     mtime = max(mtime, EARLIEST)
 
-    with TemporaryDirectory() as directory:
-        with tarfile.open(path) as tar:
-            tar.extractall(path=directory, filter="data")
+    with TemporaryDirectory() as path:
+        with TarFile.open(filename) as tar:
+            tar.extractall(path=path, filter="data")
 
-        path.unlink(missing_ok=True)
-        (extracted,) = Path(directory).iterdir()
-        uncompressed = f"{extracted}.tar"
+        filename.unlink(missing_ok=True)
+        (extracted,) = Path(path).iterdir()
 
-        prefix = directory.removeprefix("/") + "/"
+        prefix = path.removeprefix("/") + "/"
 
-        def filter_(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo:
+        def filter_(tarinfo: TarInfo) -> TarInfo:
             tarinfo.mtime = int(mtime)
             tarinfo.uid = tarinfo.gid = 0
             tarinfo.uname = tarinfo.gname = "root"
@@ -198,21 +197,25 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
             tarinfo.path = tarinfo.path.removeprefix(prefix)
             return tarinfo
 
-        with tarfile.open(uncompressed, "w") as tar:
-            tar.add(extracted, filter=filter_)
+        tar = f"{extracted}.tar"
+        with TarFile.open(tar, "w") as tarfile:
+            tarfile.add(extracted, filter=filter_)
 
         with gzip.GzipFile(
-            filename=path, mode="wb", mtime=mtime, compresslevel=0
+            filename=filename,
+            mode="wb",
+            mtime=mtime,
+            compresslevel=0,
         ) as file:
-            with open(uncompressed, "rb") as tar:
+            with open(tar, "rb") as tar:
                 copyfileobj(tar, file)
-        utime(path, (mtime, mtime))
+        utime(filename, (mtime, mtime))
     return 0
 
 
 def latest_modification_time(archive: Path) -> str:
     """Latest modification time for a gzipped tarfile as a string"""
-    with tarfile.open(archive, "r:gz") as tar:
+    with TarFile.open(archive, "r:gz") as tar:
         latest = max(member.mtime for member in tar.getmembers())
     return "{:.0f}".format(latest)
 
