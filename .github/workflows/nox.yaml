@@ -62,11 +62,10 @@ jobs:
           ${{ !( github.ref == 'refs/heads/main'
           || contains(github.event.inputs.repository-url, 'test')) }}
       - uses: actions/download-artifact@v4
-        with: { name: dist }
-      - run: sha256sum -c SHA256SUMS
-      - run: rm SHA256SUMS
+        with: { name: dist, path: dist }
+      - run: cd dist && sha256sum -c SHA256SUMS && rm SHA256SUMS
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
-          packages-dir: .
+          packages-dir: dist
           repository-url: ${{ github.event.inputs.repository-url }}
