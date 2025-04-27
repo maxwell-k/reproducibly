@@ -1,6 +1,11 @@
+#!/usr/bin/env -S uv run
 # noxfile.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
+# /// script
+# dependencies = ["nox"]
+# requires-python = ">=3.13"
+# ///
 import re
 import tomllib
 from hashlib import file_digest
@@ -275,3 +280,7 @@ def github_output(session) -> None:
     session.install("coverage", *_read_dependency_block())
     version = session.run("python", SCRIPT, "--version", silent=True).strip()
     print(f"version={version}")  # version= adds quotes
+
+
+if __name__ == "__main__":
+    nox.main()
