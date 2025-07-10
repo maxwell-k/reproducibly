@@ -7,11 +7,6 @@
     "config:recommended",
     "github>kachick/renovate-config-dprint#1.3.0"
   ],
-  "pip_requirements": {
-    "managerFilePatterns": [
-      "/constraints.txt/"
-    ]
-  },
   "customManagers": [
     {
       "customType": "regex",
