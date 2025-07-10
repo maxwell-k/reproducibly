@@ -7,16 +7,11 @@
     "config:recommended",
     "github>kachick/renovate-config-dprint#1.3.0"
   ],
-  "pip_requirements": {
-    "fileMatch": [
-      "constraints.txt"
-    ]
-  },
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        "^noxfile.py$"
+      "managerFilePatterns": [
+        "/^noxfile.py$/"
       ],
       "matchStrings": [
         "    \"(?<depName>.+?)==(?<currentValue>.+?)\","

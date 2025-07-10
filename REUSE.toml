@@ -9,7 +9,6 @@ path = [
   ".en.utf-8.add",
   ".flake8",
   ".gitignore",
-  "constraints.txt",
   "dist/SHA256SUMS",
   "dprint.json",
   "fixtures/extension/.gitignore",
