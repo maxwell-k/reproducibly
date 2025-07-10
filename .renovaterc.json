@@ -4,7 +4,7 @@
     "maxwell-k"
   ],
   "extends": [
-    "config:recommended",
+    "config:best-practices",
     "github>kachick/renovate-config-dprint#1.3.0"
   ],
   "customManagers": [
@@ -17,6 +17,15 @@
         "    \"(?<depName>.+?)==(?<currentValue>.+?)\","
       ],
       "datasourceTemplate": "pypi"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Automerge upgrades to GitHub Actions",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": true
     }
   ]
 }
