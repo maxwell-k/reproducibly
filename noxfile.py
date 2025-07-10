@@ -61,7 +61,7 @@ curl --fail --remote-name https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz \
 && curl --fail --remote-name --location \
 https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
 && tar xzf flex-2.6.4.tar.gz \
-&& ( cd flex-2.6.4 && ./configure && make && make install )\
+&& ( cd flex-2.6.4 && ./configure && make CFLAGS="-std=gnu89" && make install )\
 """
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
