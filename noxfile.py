@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run
+"""Build tooling for the reproducibly project."""
 # noxfile.py
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: MPL-2.0
@@ -15,10 +16,13 @@ from shutil import rmtree, which
 from typing import Literal
 
 import nox
+from nox.sessions import Session
 from packaging.requirements import Requirement  # see below
 
 # nox depends on packaging so it is safe to import as well
 # https://github.com/wntrblm/nox/blob/main/pyproject.toml#L46
+
+nox.options.default_venv_backend = "uv"
 
 DEVELOPMENT = [
     "black",
@@ -30,13 +34,12 @@ DEVELOPMENT = [
     "reuse",
     "usort",
 ]
-PRIMARY = "3.13"
-VIRTUAL_ENVIRONMENT = ".venv"
-CWD = Path(".").absolute()
+VIRTUAL_ENV = ".venv"
+_CWD = Path().absolute()
 OUTPUT = Path("dist")
-PYTHON = CWD / VIRTUAL_ENVIRONMENT / "bin" / "python"
-SDISTS = CWD / "sdists"
-WHEELS = CWD / "wheelhouse"
+PYTHON = _CWD / VIRTUAL_ENV / "bin" / "python"
+SDISTS = _CWD / "sdists"
+WHEELS = _CWD / "wheelhouse"
 SCRIPT = Path("reproducibly.py")
 
 # https://peps.python.org/pep-0723/#reference-implementation
@@ -88,16 +91,18 @@ nox.options.sessions = [
 ]
 
 
-def _cog(session, action: Literal["-r"] | Literal["--check"]) -> None:
-    if not Path(VIRTUAL_ENVIRONMENT).is_dir():
+def _cog(session: Session, action: Literal["-r", "--check"]) -> None:
+    if not Path(VIRTUAL_ENV).is_dir():
         _setup_venv(session, ["cogapp"])
     session.run(".venv/bin/python", "-m", "cogapp", action, SCRIPT, "README.md")
 
 
-def _setup_venv(session, additional: list[str]) -> None:
-    rmtree(VIRTUAL_ENVIRONMENT, ignore_errors=True)
-    session.run(f"python{PRIMARY}", "-m", "venv", "--upgrade-deps", VIRTUAL_ENVIRONMENT)
-    session.run(PYTHON, "-m", "pip", "install", *_read_dependency_block(), *additional)
+def _setup_venv(session: Session, additional: list[str]) -> None:
+    session.install("uv")
+    required = nox.project.load_toml("pyproject.toml")["project"]["requires-python"]
+    session.run("uv", "venv", "--python", required, VIRTUAL_ENV)
+    env = {"VIRTUAL_ENV": VIRTUAL_ENV}
+    session.run("uv", "pip", "install", "--editable", ".[test]", *additional, env=env)
 
 
 def _sha256(path: Path) -> str:
@@ -106,25 +111,25 @@ def _sha256(path: Path) -> str:
 
 
 def read(script: str) -> dict | None:
-    """https://peps.python.org/pep-0723/#reference-implementation"""
+    """See https://peps.python.org/pep-0723/#reference-implementation."""
     name = "script"
     matches = list(
-        filter(lambda m: m.group("type") == name, re.finditer(REGEX, script))
+        filter(lambda m: m.group("type") == name, re.finditer(REGEX, script)),
     )
     if len(matches) > 1:
-        raise ValueError(f"Multiple {name} blocks found")
-    elif len(matches) == 1:
+        msg = f"Multiple {name} blocks found"
+        raise ValueError(msg)
+    if len(matches) == 1:
         content = "".join(
             line[2:] if line.startswith("# ") else line[1:]
             for line in matches[0].group("content").splitlines(keepends=True)
         )
         return tomllib.loads(content)
-    else:
-        return None
+    return None
 
 
 def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
-    """Read script dependencies"""
+    """Read script dependencies."""
     metadata = read(Path(script).read_text())
     if metadata is None or "dependencies" not in metadata:
         print(f"Invalid metadata in {script}")
@@ -132,31 +137,31 @@ def _read_dependency_block(script: Path = SCRIPT) -> list[str]:
     return metadata["dependencies"]
 
 
-@nox.session(python=PRIMARY)
-def preamble(session) -> None:
-    """Display the Python and Nox versions"""
+@nox.session()
+def preamble(session: Session) -> None:
+    """Display the Python and Nox versions."""
     session.run("python", "--version")
     session.log("nox --version (simulated)")
     print(version("nox"))
 
 
 @nox.session(python=False)
-def generated(session) -> None:
-    """Check that the files have been generated"""
+def generated(session: Session) -> None:
+    """Check that the files have been generated."""
     _cog(session, "--check")
 
 
-@nox.session(python=PRIMARY)
-def static(session) -> None:
-    """Run static analysis: usort, black and flake8"""
+@nox.session()
+def static(session: Session) -> None:
+    """Run static analysis."""
+    session.install("ruff")
+    session.run("ruff", "check")
+
     session.install("usort")
     session.run("usort", "check", ".")
 
     session.install("black")
     session.run("black", "--check", ".")
-
-    session.install("flake8")
-    session.run("flake8")
 
     session.install("codespell")
     session.run("codespell")
@@ -165,18 +170,18 @@ def static(session) -> None:
     session.run("yamllint", ".github")
 
 
-@nox.session(python=PRIMARY)
-def repository(session) -> None:
-    """Run automated tests based upon the contents of this repository"""
+@nox.session()
+def repository(session: Session) -> None:
+    """Run automated tests and ensure 100% coverage."""
     session.install("coverage", *_read_dependency_block())
     session.run("python", "-m", "coverage", "run")
     session.run("python", "-m", "coverage", "html")
     session.run("python", "-m", "coverage", "report", "--fail-under=100")
 
 
-@nox.session(python=PRIMARY)
-def pypi(session) -> None:
-    """Check hashes of wheels built from downloaded sdists from pypi"""
+@nox.session()
+def pypi(session: Session) -> None:
+    """Check hashes of wheels built from downloaded sdists from pypi."""
     rmtree(SDISTS, ignore_errors=True)
     session.install("--upgrade", "pip")
     # beancount uses meson and meson-python as a build backend. `pip download`
@@ -215,7 +220,7 @@ def pypi(session) -> None:
         SCRIPT,
         *SDISTS.iterdir(),
         WHEELS,
-        env=dict(CIBW_BEFORE_ALL=CIBW_BEFORE_ALL),
+        env={"CIBW_BEFORE_ALL": CIBW_BEFORE_ALL},
     )
 
     # List each file for a specifier
@@ -227,29 +232,33 @@ def pypi(session) -> None:
 
     sdist_digests = list(map(_sha256, sdists))
     wheel_digests = list(map(_sha256, wheels))
-    assert len(sdists) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} sdists"
-    assert len(wheels) == len(SPECIFIERS), f"Expected {len(SPECIFIERS)} wheels"
-    assert (
-        sdist_digests == SDIST_DIGESTS
-    ), f"Sdist digests {sdist_digests} do not match expected {SDIST_DIGESTS}"
-    assert (
-        wheel_digests == WHEEL_DIGESTS
-    ), f"Wheel digests {wheel_digests} do not match expected {WHEEL_DIGESTS}"
+    if len(sdists) != len(SPECIFIERS):
+        msg = f"Expected {len(SPECIFIERS)} sdists"
+        raise ValueError(msg)
+    if len(wheels) != len(SPECIFIERS):
+        msg = f"Expected {len(SPECIFIERS)} wheels"
+        raise ValueError(msg)
+    if sdist_digests != SDIST_DIGESTS:
+        msg = f"Sdist digests {sdist_digests} do not match expected {SDIST_DIGESTS}"
+        raise ValueError(msg)
+    if wheel_digests != WHEEL_DIGESTS:
+        msg = f"Wheel digests {wheel_digests} do not match expected {WHEEL_DIGESTS}"
+        raise ValueError(msg)
 
 
-@nox.session(python=PRIMARY)
-def reuse(session) -> None:
-    """Run reuse lint outside of CI"""
+@nox.session()
+def reuse(session: Session) -> None:
+    """Run reuse lint outside of CI."""
     session.install("reuse")
     session.run("python", "-m", "reuse", "lint")
 
 
-@nox.session(python=PRIMARY)
-def distributions(session) -> None:
-    """Produce a source and binary distribution"""
+@nox.session()
+def distributions(session: Session) -> None:
+    """Produce a source and binary distribution."""
     session.install(*_read_dependency_block())
     rmtree(OUTPUT, ignore_errors=True)
-    session.run("python", SCRIPT, ".", OUTPUT, env=dict(SOURCE_DATE_EPOCH="315532800"))
+    session.run("python", SCRIPT, ".", OUTPUT, env={"SOURCE_DATE_EPOCH": "315532800"})
     sdist = next(OUTPUT.iterdir())
     session.run("python", SCRIPT, sdist, OUTPUT)
     files = sorted(OUTPUT.iterdir())
@@ -258,31 +267,23 @@ def distributions(session) -> None:
     OUTPUT.joinpath("SHA256SUMS").write_text(text)
 
 
-@nox.session(python=PRIMARY)
-def check(session) -> None:
-    """Check the built distributions with twine"""
+@nox.session()
+def check(session: Session) -> None:
+    """Check the built distributions with twine."""
     session.install("twine")
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
 @nox.session(python=False)
-def dev(session) -> None:
-    """Set up a development environment (virtual environment)"""
+def dev(session: Session) -> None:
+    """Set up a development environment (virtual environment)."""
     _setup_venv(session, DEVELOPMENT)
 
 
 @nox.session(python=False)
-def generate(session) -> None:
-    """Run cog on SCRIPT and README.md"""
+def generate(session: Session) -> None:
+    """Run cog on SCRIPT and README.md."""
     _cog(session, "-r")
-
-
-@nox.session(python=PRIMARY)
-def github_output(session) -> None:
-    """Display outputs for CI integration"""
-    session.install("coverage", *_read_dependency_block())
-    version = session.run("python", SCRIPT, "--version", silent=True).strip()
-    print(f"version={version}")  # version= adds quotes
 
 
 if __name__ == "__main__":
