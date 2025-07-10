@@ -61,7 +61,7 @@ curl --fail --remote-name https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz \
 && curl --fail --remote-name --location \
 https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
 && tar xzf flex-2.6.4.tar.gz \
-&& ( cd flex-2.6.4 && ./configure && make && make install )\
+&& ( cd flex-2.6.4 && ./configure && make CFLAGS="-std=gnu89" && make install )\
 """
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
@@ -73,7 +73,7 @@ SDIST_DIGESTS = [
 ]
 WHEEL_DIGESTS = [
     "fec437f3b7435cbc6db317bb8ea37ecc9a1b598e4c96a1d2837b0f5091877815",
-    "c97c9ae65ff9631cb0c2e4604bc0d6c13d11e15fa6129ae80f3d92637d19cb18",
+    "33ee20eba51cac0625ff36624a36a6df981d0c9b604d5845b973fb4518c2dabd",
 ]
 
 nox.options.sessions = [
