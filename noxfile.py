@@ -29,10 +29,11 @@ DEVELOPMENT = [
     "codespell",
     "cogapp",
     "coverage",
-    "flake8",
     "nox",
     "reuse",
+    "ruff",
     "usort",
+    "yamllint",
 ]
 VIRTUAL_ENV = ".venv"
 _CWD = Path().absolute()
@@ -79,30 +80,18 @@ WHEEL_DIGESTS = [
     "33ee20eba51cac0625ff36624a36a6df981d0c9b604d5845b973fb4518c2dabd",
 ]
 
-nox.options.sessions = [
-    "preamble",
-    "generated",
-    "static",
-    "repository",
-    "pypi",
-    "reuse",
-    "distributions",
-    "check",
-]
-
 
 def _cog(session: Session, action: Literal["-r", "--check"]) -> None:
     if not Path(VIRTUAL_ENV).is_dir():
         _setup_venv(session, ["cogapp"])
-    session.run(".venv/bin/python", "-m", "cogapp", action, SCRIPT, "README.md")
+    session.run(PYTHON, "-m", "cogapp", action, "README.md")
 
 
 def _setup_venv(session: Session, additional: list[str]) -> None:
-    session.install("uv")
     required = nox.project.load_toml("pyproject.toml")["project"]["requires-python"]
     session.run("uv", "venv", "--python", required, VIRTUAL_ENV)
     env = {"VIRTUAL_ENV": VIRTUAL_ENV}
-    session.run("uv", "pip", "install", "--editable", ".[test]", *additional, env=env)
+    session.run("uv", "pip", "install", "--editable", ".", *additional, env=env)
 
 
 def _sha256(path: Path) -> str:
@@ -146,28 +135,37 @@ def preamble(session: Session) -> None:
 
 
 @nox.session(python=False)
+def dev(session: Session) -> None:
+    """Set up a development environment (virtual environment)."""
+    _setup_venv(session, DEVELOPMENT)
+
+
+@nox.session(python=False)
 def generated(session: Session) -> None:
     """Check that the files have been generated."""
     _cog(session, "--check")
+    session.log("Checking reproducibly.py.")
+    script = set(nox.project.load_toml("reproducibly.py")["dependencies"])
+    project = set(nox.project.load_toml("pyproject.toml")["project"]["dependencies"])
+    if script != project:
+        msg = "Dependencies in reproducibly.py and pyproject.toml do no match "
+        msg += f"({script} and {project})."
+        session.error(msg)
 
 
-@nox.session()
+@nox.session(requires=["dev"])
 def static(session: Session) -> None:
     """Run static analysis."""
-    session.install("ruff")
-    session.run("ruff", "check")
 
-    session.install("usort")
-    session.run("usort", "check", ".")
+    def run(cmd: str) -> None:
+        session.run(PYTHON, "-m", *cmd.split(), external=True)
 
-    session.install("black")
-    session.run("black", "--check", ".")
-
-    session.install("codespell")
-    session.run("codespell")
-
-    session.install("yamllint")
-    session.run("yamllint", ".github")
+    run("reuse lint")
+    run("usort check src noxfile.py")
+    run("black --check .")
+    run("ruff check .")
+    run("codespell_lib")
+    run("yamllint --strict .github")
 
 
 @nox.session()
@@ -247,13 +245,6 @@ def pypi(session: Session) -> None:
 
 
 @nox.session()
-def reuse(session: Session) -> None:
-    """Run reuse lint outside of CI."""
-    session.install("reuse")
-    session.run("python", "-m", "reuse", "lint")
-
-
-@nox.session()
 def distributions(session: Session) -> None:
     """Produce a source and binary distribution."""
     session.install(*_read_dependency_block())
@@ -268,22 +259,22 @@ def distributions(session: Session) -> None:
 
 
 @nox.session()
-def check(session: Session) -> None:
+def twine(session: Session) -> None:
     """Check the built distributions with twine."""
     session.install("twine")
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
-@nox.session(python=False)
-def dev(session: Session) -> None:
-    """Set up a development environment (virtual environment)."""
-    _setup_venv(session, DEVELOPMENT)
-
-
-@nox.session(python=False)
+@nox.session(python=False, default=False)
 def generate(session: Session) -> None:
     """Run cog on SCRIPT and README.md."""
     _cog(session, "-r")
+    session.log("Generating reproducibly.py.")
+    before = nox.project.load_toml("reproducibly.py")["dependencies"]
+    after = nox.project.load_toml("pyproject.toml")["project"]["dependencies"]
+    if set(before) != set(after):
+        session.run("uv", "remove", "--script=reproducibly.py", *before)
+        session.run("uv", "add", "--active", "--script=reproducibly.py", *after)
 
 
 if __name__ == "__main__":

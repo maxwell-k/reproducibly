@@ -7,7 +7,6 @@ SPDX-PackageDownloadLocation = "https://github.com/maxwell-k/reproducibly"
 path = [
   ".coveragerc",
   ".en.utf-8.add",
-  ".flake8",
   ".gitignore",
   "dist/SHA256SUMS",
   "dprint.json",

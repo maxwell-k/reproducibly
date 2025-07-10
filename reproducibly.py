@@ -1,4 +1,4 @@
-"""Reproducibly build Python packages
+"""Reproducibly build Python packages.
 
 features:
 
@@ -17,7 +17,7 @@ features:
 import gzip
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from contextlib import chdir
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import auto, Enum, nonmember
 from os import environ, utime
 from pathlib import Path
@@ -29,6 +29,8 @@ from tarfile import TarFile, TarInfo
 from tempfile import TemporaryDirectory
 from typing import cast, Literal, TypedDict
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from types import TracebackType
+
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
@@ -36,31 +38,15 @@ from cibuildwheel.__main__ import build_in_directory
 from cibuildwheel.options import CommandLineArguments
 from pyproject_hooks import default_subprocess_runner
 
-# [[[cog import cog ; from pathlib import Path ]]]
-# [[[end]]]
-
-# [[[cog
-# import tomllib
-# with open("pyproject.toml", "rb") as f:
-#   pyproject = tomllib.load(f)
-# cog.outl("# /// script")
-# cog.outl(f'# requires-python = "{pyproject["project"]["requires-python"]}"')
-# cog.outl("# dependencies = [")
-# for dependency in pyproject["project"]["dependencies"]:
-#     cog.outl(f"#   \"{dependency}\",")
-# cog.outl("# ]")
-# cog.outl("# ///")
-# ]]]
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#   "build==1.2.2.post1",
-#   "cibuildwheel==3.0.1",
-#   "packaging==25.0",
-#   "pyproject_hooks==1.2.0",
+#     "build==1.2.2.post1",
+#     "cibuildwheel==3.0.1",
+#     "packaging==25.0",
+#     "pyproject-hooks==1.2.0",
 # ]
 # ///
-# [[[end]]]
 
 
 # - Built distributions are created from source distributions
@@ -69,18 +55,21 @@ from pyproject_hooks import default_subprocess_runner
 # - The default date for this script is the earliest date supported by both
 # - The minimum date value supported by zip files, is documented in
 #   <https://github.com/python/cpython/blob/3.13/Lib/zipfile.py>.
-EARLIEST = datetime(1980, 1, 1, 0, 0, 0).timestamp()  # 315532800.0
+EARLIEST = datetime(1980, 1, 1, 0, 0, 0, tzinfo=UTC).timestamp()  # 315532800.0
 
 
 __version__ = "0.0.15"
 
 
 def _build(
-    srcdir: Path, output: Path, distribution: Literal["wheel"] | Literal["sdist"]
+    srcdir: Path,
+    output: Path,
+    distribution: Literal["wheel", "sdist"],
 ) -> Path:
-    """Call the build API
+    """Call the build API.
 
-    Returns the path to the built distribution"""
+    Returns the path to the built distribution
+    """
     with DefaultIsolatedEnv() as env:
         builder = ProjectBuilder.from_isolated_env(
             env,
@@ -100,14 +89,15 @@ def _extract_to_empty_directory(sdist: Path, directory: str) -> Path:
 
 
 def _cibuildwheel(sdist: Path, output: Path) -> Path:
-    """Call the cibuildwheel API
+    """Call the cibuildwheel API.
 
-    Returns the path to the built distribution"""
+    Returns the path to the built distribution
+    """
     with (
         ModifiedEnvironment(
             CIBW_BUILD_FRONTEND="build",
             CIBW_CONTAINER_ENGINE="podman",
-            CIBW_ENVIRONMENT_PASS_LINUX="SOURCE_DATE_EPOCH",
+            CIBW_ENVIRONMENT_PASS_LINUX="SOURCE_DATE_EPOCH",  # noqa: S106 …_PASS_… is not a password
             CIBW_ENVIRONMENT="PIP_TIMEOUT=150",
         ),
         TemporaryDirectory() as directory,
@@ -121,30 +111,39 @@ def _cibuildwheel(sdist: Path, output: Path) -> Path:
             build_in_directory(args)
         wheel = next(args.output_dir.glob("*.whl"))
         output.joinpath(wheel.name).unlink(missing_ok=True)
-        path = Path(move(wheel, output))
-    return path
+        return Path(move(wheel, output))
 
 
 class Arguments(TypedDict):
+    """Input arguments to reproducibly.py."""
+
     repositories: list[Path]
     sdists: list[Path]
     output: Path
 
 
 class ModifiedEnvironment:
-    """A context manager to temporarily change environment variables"""
+    """A context manager to temporarily change environment variables."""
 
-    def __init__(self, **kwargs: str | None):
+    def __init__(self, **kwargs: str | None) -> None:
+        """Initialise with all arguments as environment variables."""
         self.during: dict[str, str | None] = kwargs
 
-    def __enter__(self):
-        self.before = {key: environ.get(key) for key in self.during.keys()}
+    def __enter__(self) -> None:
+        """Set the environment variables."""
+        self.before = {key: environ.get(key) for key in self.during}
         self._update(self.during)
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None:
+        """Reset environment."""
         self._update(self.before)
 
-    def _update(self, other):
+    def _update(self, other: dict[str, str | None]) -> None:
         for key, value in other.items():
             if value is None:
                 if key in environ:
@@ -154,19 +153,22 @@ class ModifiedEnvironment:
 
 
 class Builder(Enum):
+    """Enum to identifier build package."""
+
     cibuildwheel = auto()
     build = auto()
 
     @nonmember
     @staticmethod
     def which(archive: Path) -> "Builder":
+        """Return Builder.cibuildwheel if .c files are present otherwise Build.build."""
         with TarFile.open(archive, "r:gz") as tar:
             c = any(i.name.endswith(".c") for i in tar.getmembers())
         return Builder.cibuildwheel if c else Builder.build
 
 
 def cleanse_sdist(path_: Path, mtime: float) -> int:
-    """Cleanse a single source distribution
+    """Cleanse a single source distribution.
 
     - Set all uids and gids to zero
     - Set all unames and gnames to root
@@ -201,46 +203,59 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
         with TarFile.open(tar, "w") as tarfile:
             tarfile.add(extracted, filter=filter_)
 
-        with gzip.GzipFile(
-            filename=filename,
-            mode="wb",
-            mtime=mtime,
-            compresslevel=0,
-        ) as file:
-            with open(tar, "rb") as tar:
-                copyfileobj(tar, file)
+        with (
+            gzip.GzipFile(
+                filename=filename,
+                mode="wb",
+                mtime=mtime,
+                compresslevel=0,
+            ) as file,
+            Path(tar).open("rb") as tar,
+        ):
+            copyfileobj(tar, file)
         utime(filename, (mtime, mtime))
     return 0
 
 
 def latest_modification_time(archive: Path) -> str:
-    """Latest modification time for a gzipped tarfile as a string"""
+    """Latest modification time for a gzipped tarfile as a string."""
     with TarFile.open(archive, "r:gz") as tar:
         latest = max(member.mtime for member in tar.getmembers())
-    return "{:.0f}".format(latest)
+    return f"{latest:.0f}"
 
 
 def latest_commit_time(repository: Path) -> float:
-    """Return the time of the last commit to a repository
+    """Return the time of the last commit to a repository.
 
     As a UNIX timestamp, defined as the number of seconds, excluding leap
-    seconds, since 01 Jan 1970 00:00:00 UTC."""
+    seconds, since 01 Jan 1970 00:00:00 UTC.
+    """
     cmd = ("git", "-C", repository, "log", "-1", "--pretty=%ct")
     output = run(cmd, check=True, capture_output=True, text=True).stdout
     return float(output.rstrip("\n"))
 
 
 def breadth_first_key(path: str) -> list[str | list]:
+    """Key for sorting breadth first.
+
+    An example of breadth first sorted strings:
+
+    1. z
+    2. a/y
+    3. a/b/x
+
+    """
     start, sep, end = path.partition("/")
     return [sep, start, breadth_first_key(end)] if end else [sep, start]
 
 
 def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
+    """Key for reproducibly sorting ZipFiles."""
     if hasattr(input_, "filename"):
-        item = cast(ZipInfo, input_).filename
+        item = cast("ZipInfo", input_).filename
         path = item
     else:
-        item = cast(bytes, input_).decode()
+        item = cast("bytes", input_).decode()
         path = item.split(",")[0]
     if "/RECORD" in path:
         group = 3
@@ -252,7 +267,7 @@ def key(input_: bytes | ZipInfo) -> tuple[int, list[str | list]]:
 
 
 def fix_zip_members(path: Path, umask: int = 0o022) -> Path:
-    """Apply fixes to members in a zip file
+    """Apply fixes to members in a zip file.
 
     Processes the zip file in place. Path is both the source and destination, a
     temporary working copy is made.
@@ -292,7 +307,7 @@ def _is_git_repository(path: Path) -> bool:
 
     try:
         process = run(
-            ["git", "rev-parse", "--show-toplevel"],
+            ("git", "rev-parse", "--show-toplevel"),
             cwd=path,
             check=True,
             capture_output=True,
@@ -307,6 +322,7 @@ def _is_git_repository(path: Path) -> bool:
 
 
 def parse_args(args: list[str] | None) -> Arguments:
+    """Parse command line arguments."""
     parser = ArgumentParser(
         prog="reproducibly.py",
         formatter_class=RawDescriptionHelpFormatter,
@@ -333,7 +349,7 @@ def parse_args(args: list[str] | None) -> Arguments:
 
 
 def _sortwheel(wheel: Path) -> Path:
-    """Sort the lines in */RECORD and files in a wheel
+    """Sort the lines in */RECORD and files in a wheel.
 
     pypa/wheel has had reproducible builds since 0.27.0 (2016-02-05); this
     script post processes a wheel file to match the ordering that pypa/wheel
@@ -351,7 +367,8 @@ def _sortwheel(wheel: Path) -> Path:
     From observation of pypa/wheel output desired order is below. This can be
     called breadth first. It is easily created recursively. For a directory,
     list all the files in order then repeat for all of the subdirectories in
-    order."""
+    order.
+    """
     with TemporaryDirectory() as directory:
         intermediate = Path(directory) / wheel.name
         with ZipFile(wheel, "r") as original, ZipFile(intermediate, "w") as destination:
@@ -369,6 +386,7 @@ def _sortwheel(wheel: Path) -> Path:
 
 
 def main(arguments: list[str] | None = None) -> int:
+    """Reproducibly build Python packages."""
     parsed = parse_args(arguments)
     for repository in parsed["repositories"]:
         sdist = _build(repository, parsed["output"], "sdist")
