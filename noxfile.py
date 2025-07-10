@@ -161,6 +161,9 @@ def static(session) -> None:
     session.install("codespell")
     session.run("codespell")
 
+    session.install("yamllint")
+    session.run("yamllint", ".github")
+
 
 @nox.session(python=PRIMARY)
 def repository(session) -> None:

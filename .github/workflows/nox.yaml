@@ -34,10 +34,12 @@ jobs:
           nox --session=github_output >> "$GITHUB_OUTPUT"
         id: version
       - name: Upload dist/ for the publish job and to debug unexpected changes
+        # yamllint disable-line rule:line-length
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: dist, path: dist }
         if: always()
       - name: Upload wheelhouse/ to debug unexpected changes
+        # yamllint disable-line rule:line-length
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: wheelhouse, path: wheelhouse }
         if: always()
@@ -61,6 +63,7 @@ jobs:
         if: >-
           ${{ !( github.ref == 'refs/heads/main'
           || contains(github.event.inputs.repository-url, 'test')) }}
+        # yamllint disable-line rule:line-length
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: { name: dist, path: dist }
       - run: cd dist && sha256sum -c SHA256SUMS && rm SHA256SUMS
