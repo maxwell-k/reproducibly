@@ -15,7 +15,6 @@ readme = "README.md"
 requires-python = ">=3.13"
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 ]
 dependencies = [
   "build==1.2.2.post1",
@@ -23,6 +22,7 @@ dependencies = [
   "packaging==25.0",
   "pyproject-hooks==1.2.0",
 ]
+licence = "MPL-2.0"
 
 [project.urls]
 Homepage = "https://github.com/maxwell-k/reproducibly/"
