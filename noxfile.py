@@ -26,10 +26,12 @@ DEVELOPMENT = [
     "codespell",
     "cogapp",
     "coverage",
+    "mypy",
     "nox",
     "reuse",
     "ruff",
     "usort",
+    "types-setuptools",  # for fixtures
     "yamllint",
 ]
 VIRTUAL_ENV = ".venv"
@@ -163,6 +165,7 @@ def static(session: Session) -> None:
     run("ruff check .")
     run("codespell_lib")
     run("yamllint --strict .github")
+    run("mypy .")
 
 
 @nox.session()

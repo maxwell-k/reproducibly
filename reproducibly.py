@@ -18,7 +18,7 @@ import gzip
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from contextlib import chdir
 from datetime import datetime, UTC
-from enum import auto, Enum, nonmember
+from enum import auto, Enum
 from os import environ, utime
 from pathlib import Path
 from shutil import copyfileobj, move
@@ -157,7 +157,6 @@ class Builder(Enum):
     cibuildwheel = auto()
     build = auto()
 
-    @nonmember
     @staticmethod
     def which(archive: Path) -> "Builder":
         """Return Builder.cibuildwheel if .c files are present otherwise Build.build."""
@@ -182,11 +181,11 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
     mtime = max(mtime, EARLIEST)
 
     with TemporaryDirectory() as path:
-        with TarFile.open(filename) as tar:
-            tar.extractall(path=path, filter="data")
+        with TarFile.open(filename) as tarfile:
+            tarfile.extractall(path=path, filter="data")
 
         filename.unlink(missing_ok=True)
-        (extracted,) = Path(path).iterdir()
+        (bare,) = Path(path).iterdir()
 
         prefix = path.removeprefix("/") + "/"
 
@@ -198,20 +197,20 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
             tarinfo.path = tarinfo.path.removeprefix(prefix)
             return tarinfo
 
-        tar = f"{extracted}.tar"
+        tar = f"{bare}.tar"
         with TarFile.open(tar, "w") as tarfile:
-            tarfile.add(extracted, filter=filter_)
+            tarfile.add(bare, filter=filter_)
 
         with (
+            Path(tar).open("rb") as fsrc,
             gzip.GzipFile(
                 filename=filename,
                 mode="wb",
                 mtime=mtime,
                 compresslevel=0,
-            ) as file,
-            Path(tar).open("rb") as tar,
+            ) as fdst,
         ):
-            copyfileobj(tar, file)
+            copyfileobj(fsrc, fdst)
         utime(filename, (mtime, mtime))
     return 0
 

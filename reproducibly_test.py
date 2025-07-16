@@ -110,40 +110,48 @@ class TestBreadthFirstKey(unittest.TestCase):
 class TestKey(unittest.TestCase):
     """Test the key function."""
 
+    _STRINGS = (
+        "a/__init__.py",
+        "a/z.py",
+        "a/x/x.py",
+        "a/x/y/x.py",
+        "a/y/x.py",
+        "a-2023.01.13.dist-info/METADATA",
+        "a-2023.01.13.dist-info/WHEEL",
+        "a-2023.01.13.dist-info/top_level.txt",
+        "a-2023.01.13.dist-info/RECORD",
+    )
+
+    def lines(self) -> list[bytes]:
+        return [i.encode() + b",sha256=X,1234\n" for i in self._STRINGS]
+
+    def zipinfos(self) -> list[ZipInfo]:
+        return [ZipInfo(i) for i in self._STRINGS]
+
     @classmethod
     def setUpClass(cls) -> None:
-        cls._STRINGS = (
-            "a/__init__.py",
-            "a/z.py",
-            "a/x/x.py",
-            "a/x/y/x.py",
-            "a/y/x.py",
-            "a-2023.01.13.dist-info/METADATA",
-            "a-2023.01.13.dist-info/WHEEL",
-            "a-2023.01.13.dist-info/top_level.txt",
-            "a-2023.01.13.dist-info/RECORD",
-        )
-        cls.LINES = [i.encode() + b",sha256=X,1234\n" for i in cls._STRINGS]
-        cls.ZIPINFOS = [ZipInfo(i) for i in cls._STRINGS]
-        _unsorted = [2, 3, 0, 1, 4, 7, 6, 5, 8]
-        cls.UNSORTED_LINES = [cls.LINES[i] for i in _unsorted]
-        cls.UNSORTED_ZIPINFOS = [cls.ZIPINFOS[i] for i in _unsorted]
+        seed(18)
 
     def test_is_idempotent(self) -> None:
-        result = sorted(self.LINES, key=key)
-        self.assertEqual(self.LINES, result)
+        lines = self.lines()
+        self.assertEqual(lines, sorted(lines, key=key))
 
     def test_returns_expected_results(self) -> None:
-        result = sorted(self.UNSORTED_LINES, key=key)
-        self.assertEqual(self.LINES, result)
+        lines = self.lines()
+        unsorted = sample(lines, len(lines))
+        result = sorted(unsorted, key=key)
+        self.assertEqual(lines, result)
 
     def test_is_idempotent_for_zipinfos(self) -> None:
-        result = sorted(self.ZIPINFOS, key=key)
-        self.assertEqual(self.ZIPINFOS, result)
+        zipinfos = self.zipinfos()
+        result = sorted(zipinfos, key=key)
+        self.assertEqual(zipinfos, result)
 
     def test_returns_expected_results_for_zipinfo(self) -> None:
-        result = sorted(self.UNSORTED_ZIPINFOS, key=key)
-        self.assertEqual(self.ZIPINFOS, result)
+        zipinfos = self.zipinfos()
+        unsorted = sample(zipinfos, len(zipinfos))
+        result = sorted(unsorted, key=key)
+        self.assertEqual(zipinfos, result)
 
 
 class TestLatestModificationTime(unittest.TestCase):
@@ -198,12 +206,12 @@ class TestFixZipMembers(unittest.TestCase):
 class TestMain(unittest.TestCase):
     """Test the main function."""
 
+    simple_repository: str = "fixtures/simple"
+    extension_repository: str = "fixtures/extension"
+    date: str = "2024-01-01T00:00:01"
+
     @classmethod
     def setUpClass(cls) -> None:
-        date = "2024-01-01T00:00:01"
-        cls.date = datetime.fromisoformat(date).replace(tzinfo=UTC)
-        cls.simple_repository = "fixtures/simple"
-        cls.extension_repository = "fixtures/extension"
         cls._clean()
 
         for path in (cls.simple_repository, cls.extension_repository):
@@ -213,7 +221,7 @@ class TestMain(unittest.TestCase):
                     ("git", "-C", path, *args),
                     capture_output=True,
                     check=True,
-                    env={"GIT_COMMITTER_DATE": date, "GIT_AUTHOR_DATE": date},
+                    env={"GIT_COMMITTER_DATE": cls.date, "GIT_AUTHOR_DATE": cls.date},
                 )
 
             execute("-c", "init.defaultBranch=main", "init")
@@ -251,7 +259,8 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(0, result1)
         self.assertEqual(1, len(sdists))
-        self.assertEqual(self.date, datetime.fromtimestamp(mtime, tz=UTC))
+        expected = datetime.fromisoformat(self.date).replace(tzinfo=UTC)
+        self.assertEqual(expected, datetime.fromtimestamp(mtime, tz=UTC))
         self.assertEqual(0, result2)
         self.assertEqual(1, count)
 
@@ -375,13 +384,14 @@ class TestParseArgs(unittest.TestCase):
 class SimpleFixtureMixin:
     """Mixin for working with ./fixtures/."""
 
-    date: float
+    date: float = 315532800.0
     sdist: Path
-    _sdist: bytes
+    content: bytes
+    output_directory: TemporaryDirectory[str]
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._temp = TemporaryDirectory()
+        output_directory = TemporaryDirectory()
         with DefaultIsolatedEnv(installer="uv") as env:
             builder = ProjectBuilder.from_isolated_env(
                 env,
@@ -390,17 +400,20 @@ class SimpleFixtureMixin:
             )
             env.install(builder.build_system_requires)
             env.install(builder.get_requires_for_build("sdist"))
-            sdist = builder.build(distribution="sdist", output_directory=cls._temp.name)
+            sdist = builder.build(
+                distribution="sdist",
+                output_directory=output_directory.name,
+            )
         cls.sdist = Path(sdist)
-        cls._sdist = cls.sdist.read_bytes()
-        cls.date = 315532800.0
+        cls.content = cls.sdist.read_bytes()
+        cls.output_directory = output_directory
 
     def setUp(self) -> None:
-        self.sdist.write_bytes(self._sdist)
+        self.sdist.write_bytes(self.content)
 
     @classmethod
     def tearDownClass(cls) -> None:
-        cls._temp.cleanup()
+        cls.output_directory.cleanup()
 
 
 class TestCleanseSdist(SimpleFixtureMixin, unittest.TestCase):
