@@ -375,6 +375,10 @@ class TestParseArgs(unittest.TestCase):
 class SimpleFixtureMixin:
     """Mixin for working with ./fixtures/."""
 
+    date: float
+    sdist: Path
+    _sdist: bytes
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._temp = TemporaryDirectory()
