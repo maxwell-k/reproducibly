@@ -378,7 +378,7 @@ class SimpleFixtureMixin:
     @classmethod
     def setUpClass(cls) -> None:
         cls._temp = TemporaryDirectory()
-        with DefaultIsolatedEnv() as env:
+        with DefaultIsolatedEnv(installer="uv") as env:
             builder = ProjectBuilder.from_isolated_env(
                 env,
                 source_dir="fixtures/simple",
