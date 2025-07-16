@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2024 Keith Maxwell
 #
 # SPDX-License-Identifier: MPL-2.0
+"""Print hello world."""
 
 import ctypes
 

@@ -1,3 +1,7 @@
+"""Test fixture."""
+
+# ruff: noqa: INP001
+
 # SPDX-FileCopyrightText: 2024 Keith Maxwell
 #
 # SPDX-License-Identifier: CC0-1.0

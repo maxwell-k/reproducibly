@@ -15,14 +15,14 @@ readme = "README.md"
 requires-python = ">=3.13"
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 ]
 dependencies = [
   "build==1.2.2.post1",
   "cibuildwheel==3.0.1",
   "packaging==25.0",
-  "pyproject_hooks==1.2.0",
+  "pyproject-hooks==1.2.0",
 ]
+licence = "MPL-2.0"
 
 [project.urls]
 Homepage = "https://github.com/maxwell-k/reproducibly/"
@@ -33,3 +33,16 @@ reproducibly = "reproducibly:main"
 
 [tool.codespell]
 skip = './htmlcov'
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D203", # incompatible with D211
+  "D213", # incompatible with D212
+  "I", # prefer usort to ruff isort implementation
+  "PT", # prefer unittest style
+  "S310", # the rule errors on the "use instead" code from `ruff rule S310`
+  "S602", # assume arguments to subprocess.run are validated
+  "S603", # assume trusted input  to subprocess.run
+  "T201", # print is used for output in command line scripts
+]
