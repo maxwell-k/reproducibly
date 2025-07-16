@@ -152,20 +152,28 @@ def generated(session: Session) -> None:
         session.error(msg)
 
 
-@nox.session(requires=["dev"])
+@nox.session(venv_backend="none", requires=["dev"])
 def static(session: Session) -> None:
-    """Run static analysis."""
+    """Run static analysis tools."""
+    session.run(
+        "npm",
+        "exec",
+        "pyright@1.1.403",
+        "--yes",
+        "--",
+        f"--pythonpath={PYTHON}",
+    )
 
     def run(cmd: str) -> None:
-        session.run(PYTHON, "-m", *cmd.split(), external=True)
+        session.run(PYTHON, "-m", *cmd.split())
 
     run("reuse lint")
     run("usort check .")
     run("black --check .")
     run("ruff check .")
     run("codespell_lib")
-    run("yamllint --strict .github")
     run("mypy .")
+    run("yamllint --strict .github")
 
 
 @nox.session()
