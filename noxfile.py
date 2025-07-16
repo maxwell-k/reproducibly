@@ -12,15 +12,12 @@ import tomllib
 from hashlib import file_digest
 from importlib.metadata import version
 from pathlib import Path
-from shutil import rmtree, which
+from shutil import copyfileobj, rmtree
 from typing import Literal
+from urllib.request import urlopen
 
 import nox
 from nox.sessions import Session
-from packaging.requirements import Requirement  # see below
-
-# nox depends on packaging so it is safe to import as well
-# https://github.com/wntrblm/nox/blob/main/pyproject.toml#L46
 
 nox.options.default_venv_backend = "uv"
 
@@ -180,35 +177,23 @@ def repository(session: Session) -> None:
 @nox.session()
 def pypi(session: Session) -> None:
     """Check hashes of wheels built from downloaded sdists from pypi."""
+    for specifier in SPECIFIERS:
+        if "==" in specifier:
+            continue
+        msg = f"Only == specifiers are supported, exiting ({specifier}.)"
+        session.error(msg)
+
     rmtree(SDISTS, ignore_errors=True)
-    session.install("--upgrade", "pip")
-    # beancount uses meson and meson-python as a build backend. `pip download`
-    # needs to build a wheel to retrieve metadata. pip installs build
-    # dependencies before building a wheel. --no-binary=:all: means that pip
-    # installs build dependencies from source. pip errors when trying to install
-    # the patchelf and ninja build dependencies from source. A workaround is to
-    # install the build dependencies beforehand using a call to session.install
-    # and --no-build-isolation below.
-    #
-    # References:
-    # https://github.com/beancount/beancount/blob/master/pyproject.toml#L3
-    # https://discuss.python.org/t/pip-download-just-the-source-packages-no-building-no-metadata-etc/4651
-    session.install("meson", "meson-python", "ninja", "setuptools")
-    # building a wheel to retrieve metadata will fail if meson is not available
-    # on Fedora the pythonX.Y-devel package is also required
-    if which("meson") is None:
-        session.error("Meson system package required")
-    session.run(
-        "python",
-        "-m",
-        "pip",
-        "download",
-        "--no-deps",
-        "--no-binary=:all:",
-        "--no-build-isolation",
-        f"--dest={SDISTS}",
-        *SPECIFIERS,
-    )
+    SDISTS.mkdir()
+    for specifier in SPECIFIERS:
+        # Download source distributions from PyPI with urlopen
+        # Using pip requires build dependencies to be present.
+        name, version = specifier.split("==", maxsplit=1)
+        filename = f"{name}-{version}.tar.gz"
+        source = f"https://files.pythonhosted.org/packages/source/{name[0]}/{name}/{filename}"
+        target = SDISTS / filename
+        with urlopen(source) as response, target.open("wb") as out_file:
+            copyfileobj(response, out_file)
 
     rmtree(WHEELS, ignore_errors=True)
     WHEELS.mkdir()
@@ -224,7 +209,8 @@ def pypi(session: Session) -> None:
     # List each file for a specifier
     sdists, wheels = [], []
     for specifier in SPECIFIERS:
-        glob = Requirement(specifier).name + "*"
+        name, _ = specifier.split("==", maxsplit=1)
+        glob = name + "*"
         sdists.append(next(SDISTS.glob(glob)))
         wheels.append(next(WHEELS.glob(glob)))
 
