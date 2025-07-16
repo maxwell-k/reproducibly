@@ -158,7 +158,7 @@ def static(session: Session) -> None:
         session.run(PYTHON, "-m", *cmd.split(), external=True)
 
     run("reuse lint")
-    run("usort check src noxfile.py")
+    run("usort check .")
     run("black --check .")
     run("ruff check .")
     run("codespell_lib")

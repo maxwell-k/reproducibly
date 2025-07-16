@@ -27,10 +27,9 @@ from subprocess import CalledProcessError, run
 from sys import version_info
 from tarfile import TarFile, TarInfo
 from tempfile import TemporaryDirectory
+from types import TracebackType
 from typing import cast, Literal, TypedDict
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
-from types import TracebackType
-
 
 from build import ProjectBuilder
 from build.env import DefaultIsolatedEnv
