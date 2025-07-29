@@ -24,8 +24,13 @@ from subprocess import run
 
 import cog
 
-RESULT = run((".venv/bin/python", "./reproducibly.py", "--help"), text=True, check=True, capture_output=True)
-cog.out("\n```\n" + RESULT.stdout + "```\n\n")
+CMD = ".venv/bin/python ./reproducibly.py --help"
+
+cog.out("\n")
+cog.out("```\n")
+cog.out(run(CMD.split(), text=True, check=True, capture_output=True).stdout)
+cog.out("```\n")
+cog.out("\n")
 ]]]-->
 
 ```
