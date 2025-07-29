@@ -81,16 +81,8 @@ WHEEL_DIGESTS = [
 
 
 def _cog(session: Session, action: Literal["-r", "--check"]) -> None:
-    if not Path(VIRTUAL_ENV).is_dir():
-        _setup_venv(session)
+    """Run cogapp from .venv on README.md."""
     session.run(PYTHON, "-m", "cogapp", action, "README.md")
-
-
-def _setup_venv(session: Session) -> None:
-    required = nox.project.load_toml("pyproject.toml")["project"]["requires-python"]
-    session.run("uv", "venv", "--clear", "--python", required, VIRTUAL_ENV)
-    env = {"VIRTUAL_ENV": VIRTUAL_ENV}
-    session.run("uv", "pip", "install", "--editable", ".", *DEVELOPMENT, env=env)
 
 
 def _sha256(path: Path) -> str:
@@ -136,10 +128,13 @@ def preamble(session: Session) -> None:
 @nox.session(python=False)
 def dev(session: Session) -> None:
     """Set up a development environment (virtual environment)."""
-    _setup_venv(session)
+    required = nox.project.load_toml("pyproject.toml")["project"]["requires-python"]
+    session.run("uv", "venv", "--clear", "--python", required, VIRTUAL_ENV)
+    env = {"VIRTUAL_ENV": VIRTUAL_ENV}
+    session.run("uv", "pip", "install", "--editable", ".", *DEVELOPMENT, env=env)
 
 
-@nox.session(python=False)
+@nox.session(python=False, requires=["dev"])
 def generated(session: Session) -> None:
     """Check that the files have been generated."""
     _cog(session, "--check")
@@ -262,7 +257,7 @@ def twine(session: Session) -> None:
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
-@nox.session(python=False, default=False)
+@nox.session(python=False, default=False, requires=["dev"])
 def generate(session: Session) -> None:
     """Run cog on SCRIPT and README.md."""
     _cog(session, "-r")
