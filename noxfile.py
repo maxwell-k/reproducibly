@@ -82,7 +82,7 @@ WHEEL_DIGESTS = [
 
 def _cog(session: Session, action: Literal["-r", "--check"]) -> None:
     if not Path(VIRTUAL_ENV).is_dir():
-        _setup_venv(session, ["cogapp"])
+        _setup_venv(session, DEVELOPMENT)
     session.run(PYTHON, "-m", "cogapp", action, "README.md")
 
 
