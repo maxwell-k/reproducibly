@@ -194,7 +194,7 @@ def cleanse_sdist(path_: Path, mtime: float) -> int:
             tarinfo.uid = tarinfo.gid = 0
             tarinfo.uname = tarinfo.gname = "root"
             tarinfo.mode = tarinfo.mode & ~S_IWGRP & ~S_IWOTH
-            tarinfo.path = tarinfo.path.removeprefix(prefix)
+            tarinfo.name = tarinfo.name.removeprefix(prefix)
             return tarinfo
 
         tar = f"{bare}.tar"
