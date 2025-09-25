@@ -31,6 +31,7 @@ DEVELOPMENT = [
     "reuse",
     "ruff",
     "usort",
+    "setuptools",
     "types-setuptools",  # for fixtures
     "yamllint",
 ]
