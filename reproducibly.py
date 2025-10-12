@@ -57,7 +57,7 @@ from pyproject_hooks import default_subprocess_runner
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0, tzinfo=UTC).timestamp()  # 315532800.0
 
 
-__version__ = "0.0.17"
+__version__ = "0.0.18"
 
 
 def _build(
