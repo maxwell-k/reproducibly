@@ -46,3 +46,6 @@ ignore = [
   "S603", # assume trusted input  to subprocess.run
   "T201", # print is used for output in command line scripts
 ]
+
+[tool.usort.known]
+first_party = ["reproducibly"]
