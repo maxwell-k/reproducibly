@@ -137,13 +137,13 @@ def dev(session: Session) -> None:
 
 @nox.session(python=False, requires=["dev"])
 def generated(session: Session) -> None:
-    """Check that the files have been generated."""
+    """Check that SCRIPT has been generated."""
     _cog(session, "--check")
-    session.log("Checking reproducibly.py.")
-    script = set(nox.project.load_toml("reproducibly.py")["dependencies"])
+    session.log(f"Checking {SCRIPT}.")
+    script = set(nox.project.load_toml(SCRIPT)["dependencies"])
     project = set(nox.project.load_toml("pyproject.toml")["project"]["dependencies"])
     if script != project:
-        msg = "Dependencies in reproducibly.py and pyproject.toml do no match "
+        msg = f"Dependencies in {SCRIPT} and pyproject.toml do no match "
         msg += f"({script} and {project})."
         session.error(msg)
 
@@ -260,14 +260,14 @@ def twine(session: Session) -> None:
 
 @nox.session(python=False, default=False, requires=["dev"])
 def generate(session: Session) -> None:
-    """Run cog on SCRIPT and README.md."""
+    """Run cog on SCRIPT."""
     _cog(session, "-r")
-    session.log("Generating reproducibly.py.")
-    before = nox.project.load_toml("reproducibly.py")["dependencies"]
+    session.log(f"Generating {SCRIPT}.")
+    before = nox.project.load_toml(SCRIPT)["dependencies"]
     after = nox.project.load_toml("pyproject.toml")["project"]["dependencies"]
     if set(before) != set(after):
-        session.run("uv", "remove", "--script=reproducibly.py", *before)
-        session.run("uv", "add", "--active", "--script=reproducibly.py", *after)
+        session.run("uv", "remove", f"--script={SCRIPT}", *before)
+        session.run("uv", "add", "--active", f"--script={SCRIPT}", *after)
 
 
 if __name__ == "__main__":
