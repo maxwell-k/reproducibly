@@ -42,7 +42,7 @@ from pyproject_hooks import default_subprocess_runner
 # dependencies = [
 #     "build==1.4.0",
 #     "cibuildwheel==3.3.1",
-#     "packaging==25.0",
+#     "packaging==26.0",
 #     "pyproject-hooks==1.2.0",
 # ]
 # ///
@@ -57,7 +57,7 @@ from pyproject_hooks import default_subprocess_runner
 EARLIEST = datetime(1980, 1, 1, 0, 0, 0, tzinfo=UTC).timestamp()  # 315532800.0
 
 
-__version__ = "0.0.19"
+__version__ = "0.0.20"
 
 
 def _build(
