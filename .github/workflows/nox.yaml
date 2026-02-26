@@ -54,12 +54,12 @@ jobs:
 
       - name: Upload dist/ for the publish job and to debug unexpected changes
         # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with: { name: dist, path: dist }
         if: always()
       - name: Upload wheelhouse/ to debug unexpected changes
         # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with: { name: wheelhouse, path: wheelhouse }
         if: always()
       - uses: dprint/check@9cb3a2b17a8e606d37aae341e49df3654933fc23 # v2.3
@@ -83,7 +83,7 @@ jobs:
           ${{ !( github.ref == 'refs/heads/main'
           || contains(github.event.inputs.repository-url, 'test')) }}
         # yamllint disable-line rule:line-length
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8
         with: { name: dist, path: dist }
       - run: cd dist && sha256sum -c SHA256SUMS && rm SHA256SUMS
       - uses: pypa/gh-action-pypi-publish@release/v1
