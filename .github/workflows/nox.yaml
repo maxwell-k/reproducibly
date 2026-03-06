@@ -28,7 +28,6 @@ jobs:
       - uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7
         with: { python-version: "3.13" }
       - run: ./noxfile.py
-      - run: git diff --exit-code dist/SHA256SUMS
       - id: version
         shell: python
         run: |

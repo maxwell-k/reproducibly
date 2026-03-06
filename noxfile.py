@@ -260,6 +260,12 @@ def twine(session: Session) -> None:
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
 
 
+@nox.session(python=False, requires=["distributions"])
+def hashes(session: Session) -> None:
+    """Check that the hashes have been committed."""
+    session.run("git", "diff", "--exit-code", OUTPUT.joinpath("SHA256SUMS"))
+
+
 @nox.session(python=False, default=False, requires=["dev"])
 def generate(session: Session) -> None:
     """Run cog on SCRIPT."""
