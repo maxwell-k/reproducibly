@@ -2,6 +2,8 @@
 # Copyright 2023 Keith Maxwell
 # SPDX-License-Identifier: CC0-1.0
 
+permissions: {}
+
 on: # yamllint disable-line rule:truthy
   push: { branches: [main] }
   pull_request: { branches: [main] }
