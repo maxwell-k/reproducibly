@@ -86,7 +86,7 @@ jobs:
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8
         with: { name: dist, path: dist }
       - run: cd dist && sha256sum -c SHA256SUMS && rm SHA256SUMS
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           print-hash: true
           packages-dir: dist
