@@ -21,6 +21,7 @@ import nox
 from nox.sessions import Session
 
 nox.options.default_venv_backend = "uv"
+nox.options.stop_on_first_error = True
 
 DEVELOPMENT = [
     "black",
@@ -257,6 +258,12 @@ def twine(session: Session) -> None:
     """Check the built distributions with twine."""
     session.install("twine")
     session.run("twine", "check", "--strict", *OUTPUT.glob("*.*"))
+
+
+@nox.session(python=False, requires=["distributions"])
+def hashes(session: Session) -> None:
+    """Check that the hashes have been committed."""
+    session.run("git", "diff", "--exit-code", OUTPUT.joinpath("SHA256SUMS"))
 
 
 @nox.session(python=False, default=False, requires=["dev"])
