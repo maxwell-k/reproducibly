@@ -21,6 +21,7 @@ import nox
 from nox.sessions import Session
 
 nox.options.default_venv_backend = "uv"
+nox.options.stop_on_first_error = True
 
 DEVELOPMENT = [
     "black",
