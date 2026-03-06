@@ -11,11 +11,11 @@ with [inline script metadata].
 
 Command to run from PyPI and view help:
 
-    pipx run reproducibly --help
+    uv tool run reproducibly --help
 
 Command to run from a local file and view help:
 
-    pipx run ./reproducibly.py --help
+    uv run ./reproducibly.py --help
 
 Output:
 
@@ -68,11 +68,11 @@ Builds are run every day to check for reproducibility: <br />
 
 To set up a development environment use:
 
-    nox --session=dev
+    ./noxfile.py --session=dev
 
 To run unit tests and integration tests:
 
-    nox
+    ./noxfile.py
 
 [build]: https://pypi.org/project/build/
 [cibuildwheel]: https://pypi.org/project/cibuildwheel/
