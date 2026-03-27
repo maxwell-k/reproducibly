@@ -17,7 +17,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 dependencies = [
-  "build==1.4.0",
+  "build==1.4.2",
   "cibuildwheel==3.4.0",
   "packaging==26.0",
   "pyproject-hooks==1.2.0",
@@ -44,6 +44,7 @@ ignore = [
   "S310", # the rule errors on the "use instead" code from `ruff rule S310`
   "S602", # assume arguments to subprocess.run are validated
   "S603", # assume trusted input  to subprocess.run
+  "S607", # allow calling "git" rather than "/usr/bin/git"
   "T201", # print is used for output in command line scripts
 ]
 

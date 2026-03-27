@@ -167,7 +167,7 @@ def static(session: Session) -> None:
 
     run("reuse lint")
     run("usort check .")
-    run("black --check .")
+    run("black --target-version=py313 --check .")
     run("ruff check .")
     run("codespell_lib")
     run("mypy .")
