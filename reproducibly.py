@@ -42,7 +42,7 @@ from pyproject_hooks import default_subprocess_runner
 # dependencies = [
 #     "build==1.4.3",
 #     "cibuildwheel==3.4.1",
-#     "packaging==26.0",
+#     "packaging==26.1",
 #     "pyproject-hooks==1.2.0",
 # ]
 # ///
