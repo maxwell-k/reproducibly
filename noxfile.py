@@ -71,15 +71,15 @@ https://github.com/westes/flex/files/981163/flex-2.6.4.tar.gz \
 """
 SPECIFIERS = [
     "qgridtrusted==0.0.14",
-    "beancount==3.2.2",
+    "beancount==3.2.3",
 ]
 SDIST_DIGESTS = [
     "cf715f929957bde07a8069d8bdf01c4639f26838e76359b74565de7413182220",
-    "7f9a3919152232c262c826998fb2620046b47249624c665d79fa4b0a72f78bfc",
+    "f52c4d237bcb092cbf02a29373d3e59d95349c2828a91491818ae437ee220f74",
 ]
 WHEEL_DIGESTS = [
     "fec437f3b7435cbc6db317bb8ea37ecc9a1b598e4c96a1d2837b0f5091877815",
-    "c280c5753a4eaa0ccd1da247bb890a56c49378721598f3227be8454b4e93ff55",
+    "8cc1894651f005dd9f95d3ac140a5b2fdc4185925b69ba5d775060a75129af24",
 ]
 
 
