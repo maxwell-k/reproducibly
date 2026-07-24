@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
   "build==1.5.1",
-  "cibuildwheel==4.1.0",
+  "cibuildwheel==4.1.1",
   "packaging==26.2",
   "pyproject-hooks==1.2.0",
 ]
