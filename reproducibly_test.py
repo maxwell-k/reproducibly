@@ -1,6 +1,6 @@
 """Tests for reproducibly.py."""
 
-# SPDX-FileCopyrightText: 2024 Keith Maxwell <keith.maxwell@gmail.com>
+# Copyright 2024 Keith Maxwell <keith.maxwell@gmail.com>
 #
 # SPDX-License-Identifier: MPL-2.0
 #
