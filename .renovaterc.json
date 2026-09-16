@@ -26,6 +26,11 @@
       "automerge": true
     },
     {
+      "description": "Automerge upgrades to .dprint.json",
+      "matchFileNames": [".dprint.json"],
+      "automerge": true
+    },
+    {
       "description": "Automerge upgrades to pyright",
       "matchDepNames": ["pyright"],
       "automerge": true
