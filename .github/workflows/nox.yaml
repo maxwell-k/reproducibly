@@ -67,7 +67,7 @@ jobs:
         if: always()
       - uses: dprint/check@7dc032d8874778fc024f6f9b4a7e6d896782c330 # v2.5
   zizmor:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # https://github.com/zizmorcore/zizmor-action#permissions
     permissions: { security-events: write }
     steps:
