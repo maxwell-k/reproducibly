@@ -57,12 +57,12 @@ jobs:
 
       - name: Upload dist/ for the publish job and to debug unexpected changes
         # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: dist, path: dist }
         if: always()
       - name: Upload wheelhouse/ to debug unexpected changes
         # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: wheelhouse, path: wheelhouse }
         if: always()
       - uses: dprint/check@7dc032d8874778fc024f6f9b4a7e6d896782c330 # v2.5
